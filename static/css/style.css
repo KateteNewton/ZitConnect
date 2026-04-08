@@ -1,0 +1,291 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+/* ========== REGISTRATION PAGE STYLES (Split Screen) ========== */
+.split-screen {
+    display: flex;
+    min-height: 100vh;
+}
+
+.left-side {
+    flex: 1;
+    background: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+/* ZitConnect Heading - New Style */
+.left-side h1 {
+    position: absolute;
+    width: 329px;
+    height: 60px;
+    left: 90px;
+    top: 26px;
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 900;
+    font-size: 50px;
+    line-height: 61px;
+    text-align: center;
+    color: #49709C;
+    margin: 0;
+}
+
+.left-side p {
+    color: #666;
+    font-size: 16px;
+    margin-top: 100px;
+}
+
+.zc-circle {
+    width: 180px;
+    height: 180px;
+    background-color: #2C7CB6;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+    margin-top: 150px;
+}
+
+.zc-circle span {
+    font-size: 80px;
+    color: white;
+    font-weight: bold;
+}
+
+.right-side {
+    flex: 1;
+    background-color: #2C7CB6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+}
+
+.right-side form {
+    width: 100%;
+    max-width: 400px;
+}
+
+.right-side h1 {
+    color: white;
+    font-size: 32px;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.right-side h2 {
+    color: white;
+    font-size: 16px;
+    font-weight: normal;
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.right-side label {
+    display: block;
+    margin-bottom: 8px;
+    color: white;
+    font-size: 14px;
+}
+
+.right-side input {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+/* Next Button - New Style */
+.right-side button {
+    width: 124px;
+    height: 60px;
+    background: #D69E2E;
+    border-radius: 10px;
+    color: #333;
+    border: none;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 10px;
+    font-family: 'Inter', Arial, sans-serif;
+    position: relative;
+    display: block;
+}
+
+.right-side button:hover {
+    background-color: #b87d1f;
+}
+
+/* Centered button for registration */
+.right-side .centered-btn {
+    margin: 10px auto 0;
+}
+
+.right-side p {
+    text-align: center;
+    margin-top: 20px;
+    color: white;
+    font-size: 14px;
+}
+
+.right-side p a {
+    color: #FFCC00;
+    text-decoration: none;
+}
+
+.right-side p a:hover {
+    text-decoration: underline;
+}
+
+/* ========== LOGIN PAGE STYLES ========== */
+.login-container {
+    min-height: 100vh;
+    background-color: #2C7CB6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+}
+
+.login-form {
+    width: 100%;
+    max-width: 400px;
+}
+
+.login-form h1 {
+    color: white;
+    font-size: 32px;
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.login-form-group {
+    margin-bottom: 20px;
+}
+
+.login-form-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: white;
+    font-size: 14px;
+}
+
+.login-form-group input {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 5px;
+    font-size: 14px;
+    background-color: white;
+}
+
+.login-form-group input:focus {
+    outline: none;
+}
+
+/* Login Submit Button - New Style */
+.login-btn {
+    width: 124px;
+    height: 60px;
+    background: #D69E2E;
+    border-radius: 10px;
+    color: #333;
+    border: none;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 10px;
+    font-family: 'Inter', Arial, sans-serif;
+    display: block;
+}
+
+.login-btn:hover {
+    background-color: #b87d1f;
+}
+
+.login-form p {
+    text-align: center;
+    margin-top: 20px;
+    color: white;
+    font-size: 14px;
+}
+
+.login-form p a {
+    color: #FFCC00;
+    text-decoration: none;
+}
+
+.login-form p a:hover {
+    text-decoration: underline;
+}
+
+/* Previous Button Style (if needed) */
+.prev-btn {
+    width: 124px;
+    height: 60px;
+    background: #D69E2E;
+    border-radius: 10px;
+    color: #333;
+    border: none;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    font-family: 'Inter', Arial, sans-serif;
+}
+
+.prev-btn:hover {
+    background-color: #b87d1f;
+}
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 768px) {
+    .split-screen {
+        flex-direction: column;
+    }
+    .left-side {
+        min-height: 40vh;
+    }
+    .right-side {
+        min-height: 60vh;
+    }
+    
+    .login-container {
+        padding: 20px;
+    }
+    
+    .login-form {
+        max-width: 100%;
+    }
+    
+    /* Adjust ZitConnect position for mobile */
+    .left-side h1 {
+        position: relative;
+        left: auto;
+        top: auto;
+        margin-bottom: 20px;
+    }
+    
+    .zc-circle {
+        margin-top: 0;
+    }
+}
