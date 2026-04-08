@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <title>Create Account</title>
+</head>
+<body>
+    <div class="split-screen">  <!-- Changed: lowercase 's' -->
+        <div class="left-side">
+            <div class="zc-circle">  <!-- Changed: lowercase 'z' and 'c' -->
+                <span>ZC</span>
+            </div>
+            <h1>ZitConnect</h1>  <!-- Moved: outside the circle -->
+            <p>Peer to peer Academic Support</p>  <!-- Moved: outside the circle -->
+        </div>
+
+        <div class="right-side">
+            <form>
+                <h1>Create Account</h1>
+                <h2>Register Using ZitConnect</h2>
+                
+                <div class="form-group">  <!-- Changed: lowercase and hyphen instead of underscore -->
+                    <label for="fullname">Full Names</label>
+                    <input type="text" id="fullname" name="fullname">
+                </div>
+
+                <div class="form-group">
+                    <label for="username">UserName</label>
+                    <input type="text" id="username" name="username">
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" name="email">
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password">
+                </div>
+
+                <div class="form-group">
+                    <label for="confirm_password">Confirm Password</label>
+                    <input type="password" id="confirm_password" name="confirm_password">
+                </div>
+
+                <button type="submit">Next</button>  <!-- Changed: type="submit" -->
+                <p>Already Have an Account? <a href="login.html">Login</a></p>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
