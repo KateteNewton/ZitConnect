@@ -1,0 +1,148 @@
+body{
+        margin:0;
+        font-family:Arial, sans-sarif;
+      }
+      /*MAIN CONTAINER*/
+      .container{
+        display:flex;
+        height:100vh;
+      }
+
+      /*LEFT SIDE*/
+      .left{
+        flex:1;
+        background: #f2f2f2;
+        display: flex;
+       padding: 1px;
+      }
+
+      .left p{
+padding-top: 5px;
+color: #f2f2f2;
+padding-bottom:2px ;
+margin-bottom: 500px;
+margin-top: 2px;
+padding-right:2px;
+padding-left:2px ;
+text-align: center;
+border-radius: 18px;
+background-color: #49709C;
+font-weight: bold;
+flex-wrap: wrap;
+
+  }
+  .left h3 {
+   flex:1;
+    color: #49709C;
+    padding-left:5px;
+    margin-top: 8px;
+  }
+      /*IMAGE*/
+      .left img{
+      position: absolute;
+      width: 377px;
+      height:390px;
+      left:214px;
+      top:313px;
+      }
+      /*RIGHT SIDE*/
+      .right{
+        flex:1;
+        background: #49709C;
+        color:white;
+        
+        padding :25px;
+      
+      }
+      /* HEADER*/
+      .right h3 {
+        margin-bottom: 0px;
+        text-align: center;
+        margin-top: 20px;
+        margin-left: 50px;
+      }
+      .right p{
+        margin-bottom: 30px;
+        margin-top: 0px;
+        text-align: center;
+        margin-left: 50px;
+      }
+      /*FORM*/
+      .form{
+      display: flex;
+      flex-direction:column;
+       padding:12px;
+      }
+      .label{
+        margin-top:15px;
+        margin-bottom: 20px;
+        font-weight:bold;
+        padding-bottom: 10px;
+      }
+      .school{
+        display: flex;
+        padding-top: 15px;
+        font-weight: bold;
+        font-size: 15px;
+      }
+      .program{
+        display:flex;
+        padding-top:7px;
+        font-weight: bold;
+        font-size: 15px;
+      }
+      .register-as{
+        display: flex;
+        padding-top: 40px;
+        font-weight: bold;
+      }
+      .select{
+        margin-top:3px;
+       padding-top:8px;
+       padding-left:10px;
+       padding-bottom:7px;
+       padding-right:100px;
+        border-radius: 4px;
+        border: none;
+        margin-bottom: 15x;
+      }
+      /*RADIO SECTION*/
+      .radio-group{
+        margin-top:20px;
+        
+        margin-left: 60px;
+      }
+      .radio-group label{
+        font-weight:normal;
+        display:flex;  
+        font-size: 10px;
+        
+      }
+  /*BUTTONS*/
+  .buttons{
+    display: flex;
+    justify-content: space-between;
+    margin-left: 40px;
+  }
+  button{
+    margin-top: 50px;
+    padding-top: 6px;
+     padding-bottom: 6px;
+      padding-right: 8px;
+       padding-left: 8px;
+       font-size: 13px;
+    border:none;
+    border-radius: 5px;
+background: #f4a62a;
+color:white;
+cursor: pointer;
+font-weight: normal;
+text-align: center;
+  }
+  /*LOGIN*/
+  .login{
+margin-top: 10px;
+font-size: 10px;
+text-align: center;
+  }
+  
