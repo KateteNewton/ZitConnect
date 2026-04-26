@@ -28,11 +28,6 @@ body {
 
 /* ZitConnect Heading - New Style */
 .left-side h1 {
-    position: absolute;
-    width: 329px;
-    height: 60px;
-    left: 90px;
-    top: 26px;
     font-family: 'Inter';
     font-style: normal;
     font-weight: 900;
@@ -44,9 +39,9 @@ body {
 }
 
 .left-side p {
-    color: #666;
+    color: #2C7CB6;
     font-size: 16px;
-    margin-top: 100px;
+    margin-top: 10px;
 }
 
 .zc-circle {
@@ -58,7 +53,6 @@ body {
     align-items: center;
     justify-content: center;
     margin-bottom: 20px;
-    margin-top: 150px;
 }
 
 .zc-circle span {
@@ -126,9 +120,8 @@ body {
     font-size: 16px;
     font-weight: bold;
     cursor: pointer;
-    margin-top: 10px;
+    margin: 10px auto 0;
     font-family: 'Inter', Arial, sans-serif;
-    position: relative;
     display: block;
 }
 
@@ -214,7 +207,7 @@ body {
     font-size: 16px;
     font-weight: bold;
     cursor: pointer;
-    margin-top: 10px;
+    margin: 10px auto 0;
     font-family: 'Inter', Arial, sans-serif;
     display: block;
 }
@@ -257,16 +250,49 @@ body {
     background-color: #b87d1f;
 }
 
+.mobile-logo {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 15px;
+    margin-bottom: 10px;
+}
+
+.zc-circle-mobile {
+    display: none;
+    width: 60px;
+    height: 60px;
+    background-color: white;
+    border-radius: 50%;
+    border: 2px solid #2C7CB6;
+    align-items: center;
+    justify-content: center;
+}
+
+.zc-circle-mobile span {
+    font-size: 26px;
+    color: #2C7CB6;
+    font-weight: bold;
+}
+
 /* ========== RESPONSIVE ========== */
 @media (max-width: 768px) {
     .split-screen {
-        flex-direction: column;
+        flex-direction: row;
     }
+    
     .left-side {
-        min-height: 40vh;
+        display: none;
     }
+    
+    .zc-circle-mobile {
+        display: flex;
+    }
+    
     .right-side {
-        min-height: 60vh;
+        flex: 1;
+        min-height: 100vh;
+        padding: 20px;
     }
     
     .login-container {
@@ -275,17 +301,5 @@ body {
     
     .login-form {
         max-width: 100%;
-    }
-    
-    /* Adjust ZitConnect position for mobile */
-    .left-side h1 {
-        position: relative;
-        left: auto;
-        top: auto;
-        margin-bottom: 20px;
-    }
-    
-    .zc-circle {
-        margin-top: 0;
     }
 }
