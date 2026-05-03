@@ -14,16 +14,15 @@ body{
         background: #f2f2f2;
         display: flex;
        padding: 1px;
+       justify-content: center;
       }
 
       .left p{
-padding-top: 5px;
+        display:flex;
+        justify-content: center;
+padding:9px;
+margin-top: 3px;
 color: #f2f2f2;
-padding-bottom:2px ;
-margin-bottom: 500px;
-margin-top: 2px;
-padding-right:2px;
-padding-left:2px ;
 text-align: center;
 border-radius: 18px;
 background-color: #49709C;
@@ -32,25 +31,18 @@ flex-wrap: wrap;
 
   }
   .left h3 {
+    justify-content: center;
    flex:1;
     color: #49709C;
     padding-left:5px;
     margin-top: 8px;
   }
-      /*IMAGE*/
-      .left img{
-      position: absolute;
-      width: 377px;
-      height:390px;
-      left:214px;
-      top:313px;
-      }
+    
       /*RIGHT SIDE*/
       .right{
         flex:1;
         background: #49709C;
         color:white;
-        
         padding :25px;
       
       }
@@ -145,4 +137,46 @@ margin-top: 10px;
 font-size: 10px;
 text-align: center;
   }
+
+  @media(max-width: 768px){
+  .container{
+    flex-direction: column;
+  }
+  .left{
+    display:none;
+  }
+  .right{
+    flex: none;
+    width: 100%;
+    padding:20px;
+    height:100vh;
+  }
+
+  .logo{
+    display:block;   
+    background-color: white;   
+    color: #49709C;              
+    margin-bottom: 20px;
+  }
+
   
+  .right h3,
+  .right p{
+    margin-left:0;
+    text-align:center;
+  }
+
+  .radio-group{
+    margin-left:0;
+  }
+
+  .buttons{
+    margin-left:0;
+  }
+
+ 
+  .select{
+    width:100%;
+    padding-right:10px;
+  }
+  }

@@ -12,11 +12,26 @@
      background: #f2f2f2;
      flex:1;
      display: flex;
-    
+    width:auto;
+    height: 100vh;
      padding:1px;
      color:#49709C;
      align-items: center;
 flex-direction: column;
+text-align: center;
+
+    }
+    .right{
+      display:flex;
+      background:#49709C ;
+      flex: 1;
+      padding:35px;
+      height: 100vh;
+      width:100%;
+      color:white;
+      justify-content: center;
+      flex-direction: column;
+  
 
     }
    .left h2{
@@ -43,18 +58,7 @@ flex-direction: column;
       font-weight: bold;
       margin-top: 0px;
     }
-    .right{
-      
-      background:#49709C ;
-      padding:35px;
-      height: 100vh;
-      width:500px;
-      color:white;
-      justify-content: center;
-      flex-direction: column;
-    padding-left: 50px;
-
-    }
+    
     .right h2{
       text-align: center;
       padding-bottom: 0px;
@@ -63,7 +67,7 @@ flex-direction: column;
     }
     .right p{
       display: flex;
-      margin-left:165px;
+      justify-content: center;
       text-align: center;
       margin-top: 1px;
       font-size: 15px;
@@ -167,14 +171,16 @@ flex-direction: column;
     }
 
     .next-button{
-      margin-left: 215px;
-      margin-right: 215px;
+     display: flex;
+      justify-content: center;
       padding-top:8px;
       padding-bottom:8px;
       border-radius: 6px;
       border:none;
       color:white;
       font-weight: bold;
+      margin-left: 50%;
+      
       background-color:#f4a62a ;
     }
     .login{
@@ -182,4 +188,32 @@ flex-direction: column;
       text-align: center;
       font-weight: bold;
       margin-top: 6px;
+    }
+   
+
+    @media(max-width:768px){
+      .container{
+        flex-direction: column;
+      }
+      .left{
+        padding:30px 15px;
+        margin-top: 20px;
+      }
+      .left h2{
+        margin-top: 50px;
+      }
+      .right{
+        max-width: 100%;
+        padding: 25px 15px;
+      }
+      .name{
+        margin-right:0;
+        padding-right: 0;
+      }
+      .label{
+        margin-bottom: 15px;
+      }
+      .next-button{
+        justify-content: center;
+      }
     }
