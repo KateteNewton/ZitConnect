@@ -1,0 +1,250 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f0f2f5;
+}
+
+.Dashboard {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    min-height: 100vh;
+}
+
+.left {
+    background: #1a3a5c;
+    color: white;
+    padding: 25px 0;
+}
+
+.Header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 20px 20px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    margin-bottom: 10px;
+}
+
+.logo-circle {
+    width: 50px;
+    height: 50px;
+    background: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.logo-circle::after {
+    content: "zc";
+    color: #1a3a5c;
+    font-weight: 800;
+    font-size: 18px;
+}
+
+.Header h1 {
+    font-size: 24px;
+    margin: 0;
+}
+
+.menu-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px;
+    cursor: pointer;
+    transition: background 0.3s;
+    font-size: 16px;
+    color: white;
+}
+
+.menu-item:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.menu-icon {
+    font-size: 18px;
+    width: 25px;
+}
+
+.right {
+    background: #f5f7fa;
+    padding: 20px;
+    min-height: calc(100vh - 0px);
+}
+
+
+.Welcome_part {
+    background: transparent;
+    padding: 18px 20px;
+    border-radius: 12px;
+    margin-bottom: 18px;
+}
+
+/* Make bottom/table area match the grey background “surrounding” behavior */
+.right .bottom {
+    background: #ffffff;
+    border: none;
+}
+
+
+.right .Container {
+    background: #ffffff;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.right .session-row {
+    background: #ffffff;
+}
+
+
+
+
+
+
+.Welcome_part h2 {
+    color: #1a3a5c;
+    font-size: 20px;
+}
+
+/* 3 cards in ONE LINE */
+.cards-container {
+    display: flex;
+    gap: 18px;
+    margin-bottom: 25px;
+    align-items: stretch;
+}
+
+.card {
+    background: #ffffff;
+    padding: 16px 20px;
+    border-radius: 14px;
+    flex: 0 0 260px;
+    text-align: center;
+    box-shadow: none;
+    border: 1px solid #e5e7eb;
+}
+
+
+.card h3 {
+    color: #1a3a5c;
+    font-size: 14px;
+    margin-bottom: 10px;
+}
+
+.card-value {
+    font-size: 32px;
+    font-weight: 800;
+    color: #2c5f8a;
+}
+
+.cards-container .card:not(:last-child) {
+    margin-right: 0;
+}
+
+
+.card:first-child .card-value::before {
+    content: "$";
+}
+
+/* Bottom table */
+.bottom {
+    background: #ffffff;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: none;
+    margin-top: 18px;
+    padding: 0;
+    border: 1px solid #e5e7eb;
+}
+
+
+
+/* Header row - Student, Course, Date, Type, Actions in ONE LINE */
+.Container {
+    display: grid;
+    grid-template-columns: 2fr 2fr 1.5fr 1.5fr 2fr;
+    background: #ffffff;
+    padding: 14px 20px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+
+.Container h3 {
+    color: #333;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+/* Data row - each session in ONE LINE with spaces */
+.session-row {
+    display: grid;
+    grid-template-columns: 2fr 2fr 1.5fr 1.5fr 2fr;
+    padding: 14px 20px;
+    border-bottom: 1px solid #e0e0e0;
+    align-items: center;
+    border-radius: 999px;
+}
+
+
+.session-row span {
+    color: #333;
+    font-size: 14px;
+}
+
+/* Action buttons in ONE LINE */
+.action-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.accept-btn {
+    background: #28a745;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.accept-btn:hover {
+    background: #1e7e34;
+}
+
+.decline-btn {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.decline-btn:hover {
+    background: #bd2130;
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+    .Dashboard {
+        grid-template-columns: 200px 1fr;
+    }
+    
+    .cards-container {
+        flex-direction: column;
+    }
+    
+    .Container, .session-row {
+        grid-template-columns: 1fr;
+        gap: 8px;
+        text-align: center;
+    }
+}
