@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZitConnect - Tutor Dashboard</title>
+    <link rel="stylesheet" href="/static/css/tutor-dashboard.css">
+</head>
+<body>
+    <div class="Dashboard">
+        <div class="left">
+            <div class="Header">
+                <div class="logo-circle"></div>
+                <h1>ZitConnect</h1>
+            </div>
+            <div class="menu-item">
+                <span class="menu-icon">📊</span>
+                <span>Dashboard</span>
+            </div>
+            <div class="menu-item">
+                <span class="menu-icon">📅</span>
+                <span>My Sessions</span>
+            </div>
+            <div class="menu-item">
+                <span class="menu-icon">💰</span>
+                <span>Earnings</span>
+            </div>
+            <div class="menu-item">
+                <span class="menu-icon">📚</span>
+                <span>Course Management</span>
+            </div>
+            <div class="menu-item">
+                <span class="menu-icon">👤</span>
+                <span>Profile</span>
+            </div>
+        </div>
+
+        <div class="right">
+            <div class="Welcome_part">
+                <h2>Welcome, User</h2>
+            </div>
+            
+            <!-- 3 cards in ONE LINE -->
+            <div class="cards-container">
+                <div class="card">
+                    <h3>Total Earnings</h3>
+                    <div class="card-value">0</div>
+                </div>
+                <div class="card">
+                    <h3>Pending Session Requests</h3>
+                    <div class="card-value">0</div>
+                </div>
+                <div class="card">
+                    <h3>Upcoming Sessions</h3>
+                    <div class="card-value">0</div>
+                </div>
+            </div>
+
+            <!-- Table with headers in ONE LINE -->
+            <div class="bottom">
+                <div class="Container">
+                    <h3>Student</h3>
+                    <h3>Course</h3>
+                    <h3>Date</h3>
+                    <h3>Type</h3>
+                    <h3>Actions</h3>
+                </div>
+                
+                <!-- Data row in ONE LINE -->
+                <div class="session-row">
+                    <span>Waiting for students...</span>
+                    <span>---</span>
+                    <span>---</span>
+                    <span>---</span>
+                    <div class="action-buttons">
+                        <button class="accept-btn">Accept</button>
+                        <button class="decline-btn">Decline</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
