@@ -1,0 +1,167 @@
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+}
+
+body{
+  font-family: Arial, sans-serif;
+  background:#eef2f5;
+  overflow-x:hidden
+}
+
+.navbar{
+  background: #49709C;
+  padding:15px 30px;
+  display:flex;
+  justify-content: space-between;
+  
+}
+
+.logo{
+  color:white;
+  font-size:28px;
+  font-weight:bold;
+  margin-left:10px;
+}
+.back-arrow{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: #f3f6ff;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.icons{
+  display: flex;
+  gap:20px;
+}
+
+.profile-container{
+  width:80%;
+  margin:40px auto;
+  background: white;
+  border-radius:15x;
+  padding:40px;
+  box-shadow:0 4px 10px rgba(0,0,0,0.1);
+
+}
+
+.top-section{
+  display:flex;
+  align-items:center;
+  gap:30px;
+}
+.profile-pic{
+  width:140px;
+  height:140px;
+  border-radius:50%;
+  background:#d9d9d9;
+}
+.info h1{
+  color:#333;
+  margin-bottom:10px;
+}
+.badge{
+  display:inline-block;
+  color:white;
+  background:#f4b400;
+  padding:5px 12px;
+  border-radius:20px;
+  font-size:14px;
+  margin-bottom:15px;
+}
+
+.rating{
+  color:#f4b400;
+  font-size:22px;
+}
+
+.rating span{
+  color:#444;
+  font-size:16px;
+  margin-left:10px;
+}
+.about{
+  margin-top:40px;
+}
+.about{
+  margin-top:40px;
+}
+.about h2{
+margin-bottom:15px;
+color:#49709C;
+}
+.about p{
+line-height:1.6;
+color:#555;
+font-weight: bold;
+padding-bottom: 8px;
+}
+.list{
+  align-items: center;
+  padding-bottom: 8px;
+  padding-left: 40px;
+}
+
+.courses{
+  margin-top:40px;
+  
+}
+.courses h2{
+  color:#49709C;
+  margin-bottom:20px;
+}
+.course-tag{
+  display:flex;
+  flex-wrap:wrap;
+  gap:15px;
+}
+.tag{
+  margin:10px;
+  background:#dce3ea;
+  padding:10px 18px;
+  border-radius: 8px;
+  font-weight:bold;
+}
+
+.request-btn{
+  margin-top:40px;
+  width:100%;
+  padding:15px;
+  border:none;
+  border-radius:10px;
+  background: #4caf50;
+  color:white;
+  font-weight:bold;
+  cursor: pointer;
+  transition:0.3s;
+}
+.request-btn:hover{
+  background:#3d9442;
+}
+
+@media(max-width:786px){
+  .navbar{
+    flex-direction:row;
+    justify-content:space-between;
+    align-items:center;
+  }
+  .profile-container{
+    overflow-x:hidden;
+    margin:20px auto;
+    flex-direction:column;
+   
+  }
+  .top-section{
+    flex-direction:column;
+    align-items:center;
+    text-align:center;
+    gap:20px;
+  }
+}

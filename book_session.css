@@ -1,0 +1,141 @@
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+}
+body{
+  font-family:Arial,sans-serif;
+  background: #eef2f5;
+}
+
+.navbar{
+  background:#49709C;
+  padding:13px 25px;
+
+  display:flex;
+  justify-content: space-between;
+  align-items:center;
+ 
+}
+.back-arrow{
+  
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: #f3f6ff;
+  border: none;
+  border-radius: 19px;
+  cursor: pointer;
+  padding-top:3px;
+  margin-left:2px;
+  color: rgba(0, 0, 0, 0.5);
+}
+.back-arrow:hover{
+  background: #e8eefc;
+}
+
+.logo{
+  color:white;
+  font-size:28px;
+  font-weight:bold;
+  padding-left:10px;
+}
+
+.icon{
+  display:flex;
+  gap:20px;
+}
+.icons i{
+  color:white;
+  font-size:22px;
+  cursor:pointer;
+}
+
+.container{
+  width:50%;
+  margin:50px auto;
+  background: white;
+  padding:40px;
+  border-radius:15px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.container h1{
+  color:#49709C;
+  margin-bottom:30px;
+}
+form{
+  display:flex;
+  flex-direction:column;
+}
+label{
+  margin-bottom:8px;
+  margin-top:20px;
+
+  font-weight:bold;
+  color:#333;
+}
+
+input,select{
+  padding: 14px;
+  border:1px solid #ccc;
+  border-radius:8px;
+  font-size:16px;
+}
+
+.readonly{
+  background:#e9ecef;
+}
+button{
+  margin-top:35px;
+  padding:15px;
+  border:none;
+  border-radius:10px;
+  background:#4caf50;
+  color:white;
+  font-size:18px;
+  font-weight:bold;
+  cursor:pointer;
+  transition:0.3s;
+}
+
+button:hover{
+  background:#3f9443;
+}
+
+@media(max-width:768px){
+.navigation-bar{
+  flex-direction:row;
+  justify-content: space-between;
+  align-items:center;
+  padding:12px 14px;
+}
+.nav-left{
+  justify-content:space-between;
+  width: 100%;
+
+}
+.container{
+  width:90%;
+  margin:30px auto;
+}
+
+}
+@media(max-width:480px){
+  .navigation-bar{
+  flex-direction:row;
+  justify-content: space-between;
+  align-items:center;
+  padding:12px 14px;
+}
+.nav-left{
+  justify-content:space-between;
+  width: 100%;
+
+}
+.container{
+  width:90%;
+  margin:30px auto;
+}
+}
