@@ -91,6 +91,7 @@ body {
 .right .bottom {
     background: #ffffff;
     border: none;
+    margin-left: auto; 
 }
 
 
@@ -112,6 +113,7 @@ body {
     color: #1a3a5c;
     font-size: 20px;
 }
+
 
 /* 3 cards in ONE LINE */
 .cards-container {

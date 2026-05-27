@@ -1,0 +1,349 @@
+/* Reset */
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;
+    background:#f0f2f5;
+}
+
+
+/* Main layout */
+
+.Dashboard{
+
+    display:grid;
+
+    grid-template-columns:260px 1fr;
+
+    min-height:100vh;
+}
+
+
+/* LEFT SIDE */
+
+/* CHANGED:
+   padding:25px
+   → padding:25px 0
+*/
+
+.left{
+
+    background:#1a3a5c;
+
+    color:white;
+
+    padding:25px 0;
+}
+
+
+/* CHANGED:
+   matched tutor dashboard
+*/
+
+.Header{
+
+    display:flex;
+
+    align-items:center;
+
+    gap:10px;
+
+    padding:0 20px 20px 20px;
+
+    border-bottom:1px solid rgba(255,255,255,0.2);
+
+    margin-bottom:10px;
+}
+
+
+/* Logo */
+
+.logo-circle{
+
+    width:50px;
+
+    height:50px;
+
+    background:white;
+
+    border-radius:50%;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    box-shadow:0 2px 5px rgba(0,0,0,0.2);
+}
+
+.logo-circle::after{
+
+    content:"zc";
+
+    color:#1a3a5c;
+
+    font-size:18px;
+
+    font-weight:800;
+}
+
+
+.Header h1{
+
+    font-size:24px;
+}
+
+
+/* Menu */
+
+.menu-item{
+
+    display:flex;
+
+    align-items:center;
+
+    gap:12px;
+
+    padding:12px 20px;
+
+    cursor:pointer;
+
+    transition:0.3s;
+
+    color:white;
+}
+
+.menu-item:hover{
+
+    background:rgba(255,255,255,.15);
+}
+
+.material-icons{
+
+    font-size:22px;
+
+    width:25px;
+}
+
+
+/* RIGHT SIDE */
+
+/* CHANGED:
+   matched tutor dashboard
+*/
+
+.right{
+
+    background:#f5f7fa;
+
+    padding:20px;
+
+    min-height:100vh;
+}
+
+
+/* Welcome */
+
+.Welcome_part{
+
+    padding:18px 20px;
+
+    margin-bottom:18px;
+}
+
+.Welcome_part h2{
+
+    color:#1a3a5c;
+
+    font-size:20px;
+}
+
+
+/* CARDS */
+
+/* CHANGED:
+   grid → flex
+*/
+
+.cards-container{
+
+    display:flex;
+
+    gap:18px;
+
+    margin-bottom:25px;
+
+    align-items:stretch;
+}
+
+
+.card{
+
+    background:white;
+
+    padding:16px 20px;
+
+    border-radius:14px;
+
+    flex:0 0 260px;
+
+    border:1px solid #e5e7eb;
+}
+
+.card h3{
+
+    color:#1a3a5c;
+
+    font-size:14px;
+
+    margin-bottom:10px;
+}
+
+.card-value{
+
+    font-size:32px;
+
+    font-weight:800;
+
+    color:#2c5f8a;
+}
+
+
+/* TABLE */
+
+.bottom{
+
+    background:white;
+
+    border-radius:14px;
+
+    overflow:hidden;
+
+    margin-top:18px;
+
+    border:1px solid #e5e7eb;
+}
+
+
+.Container{
+
+    display:grid;
+
+    grid-template-columns:
+    2fr 2fr 1.5fr 1.5fr 2fr;
+
+    padding:14px 20px;
+
+    border-bottom:1px solid #e0e0e0;
+}
+
+
+.Container h3{
+
+    font-size:14px;
+
+    color:#333;
+}
+
+
+/* Session row */
+
+.session-row{
+
+    display:grid;
+
+    grid-template-columns:
+    2fr 2fr 1.5fr 1.5fr 2fr;
+
+    padding:14px 20px;
+
+    align-items:center;
+}
+
+
+.session-row span{
+
+    color:#333;
+}
+
+
+/* Buttons */
+
+.action-buttons{
+
+    display:flex;
+
+    gap:10px;
+}
+
+.accept-btn{
+
+    background:#28a745;
+
+    color:white;
+
+    border:none;
+
+    padding:6px 14px;
+
+    border-radius:6px;
+
+    cursor:pointer;
+}
+
+.accept-btn:hover{
+
+    background:#1e7e34;
+}
+
+.decline-btn{
+
+    background:#dc3545;
+
+    color:white;
+
+    border:none;
+
+    padding:6px 14px;
+
+    border-radius:6px;
+
+    cursor:pointer;
+}
+
+.decline-btn:hover{
+
+    background:#bd2130;
+}
+
+
+/* Mobile */
+
+@media(max-width:768px){
+
+    .Dashboard{
+
+        grid-template-columns:200px 1fr;
+    }
+
+    .cards-container{
+
+        flex-direction:column;
+    }
+
+    .Container,
+    .session-row{
+
+        grid-template-columns:1fr;
+
+        gap:8px;
+
+        text-align:center;
+    }
+}

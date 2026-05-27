@@ -1,9 +1,12 @@
-# TODO: Restore register/login to henry branch state (resolve conflicts keeping HEAD)
+# TODO
 
-- [ ] Step 1: Read templates/register1.html to understand conflict and plan exact edits
-- [x] Step 2: Resolve conflicts in app.py - remove markers, keep HEAD simple register/login code
-- [x] Step 3: Resolve conflicts in templates/login.html - keep HEAD simple form
-- [x] Step 4: Resolve conflicts in templates/register1.html - keep HEAD version
-- [ ] Step 5: git add resolved files && git commit -m "Resolve conflicts: restore login/register to henry branch versions"
-- [ ] Step 6: Test locally: python app.py, check /login and /register work as before
-- [ ] Step 7: Mark complete
+## Why changes weren’t showing
+- [x] Found admin template CSS link typo (`/statict/...` instead of `/static/...`).
+- [x] Updated `templates/admin_dashboard.html` to load `/static/css/admin-dashboard.css`.
+
+## Make admin interface similar to tutor dashboard
+- [ ] Align admin HTML class names/structure to match tutor dashboard selectors (menu-item, Container/ container, span vs sapn, accept/decline button classes).
+- [ ] Ensure left menu uses `menu-item` (not `menue-item`) and icons use correct `menu-icon` / `material-icons` classes.
+- [ ] Update admin-dashboard.css to mirror tutor-dashboard.css layout (Dashboard grid, left/right styling, cards-container, bottom table grid, action buttons).
+- [ ] Run the app and verify admin dashboard styling matches tutor dashboard.
+
