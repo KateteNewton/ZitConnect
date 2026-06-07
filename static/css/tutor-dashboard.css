@@ -250,3 +250,30 @@ body {
         text-align: center;
     }
 }
+.rating-section{
+    margin-top: 30px;
+    padding: 20px;
+    background: white;
+    border-radius: 10px;
+}
+
+.stars{
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.star{
+    font-size: 40px;
+    cursor: pointer;
+    color: gray;
+    transition: 0.3s;
+}
+
+.star:hover{
+    transform: scale(1.1);
+}
+
+.active-star{
+    color: gold;
+}

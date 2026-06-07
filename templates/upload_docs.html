@@ -11,11 +11,11 @@
   <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
   <!-- Material Symbols -->
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
 
   <!-- External CSS extracted from the HTML <style> blocks -->
   <link rel="stylesheet" href="static\css\upload_docs.css"/>
   <link rel="stylesheet" href="static\css\upload_docs.css"/>
+
 
 
   <!-- Shared Style Configuration -->
@@ -121,6 +121,7 @@
       min-height: max(884px, 100dvh);
     }
   </style>
+
 </head>
 
 <body class="bg-background text-on-background min-h-screen flex flex-col font-body-md text-body-md overflow-x-hidden">
@@ -145,6 +146,7 @@
       </div>
 
       <!-- Upload Zone -->
+       <p id="error-message" class="text-error mt-4 font-label-md"></p>
       <div class="relative group cursor-pointer border-2 border-dashed border-outline-variant bg-surface-container-lowest rounded-xl p-10 md:p-20 text-center transition-all duration-300 hover:border-primary hover:bg-surface-container-low active:scale-[0.99]" id="drop-zone" onclick="document.getElementById('file-input').click()">
         <input accept=".pdf,.jpg,.jpeg,.png" class="hidden" id="file-input" multiple type="file"/>
         <div class="flex flex-col items-center">
@@ -247,39 +249,103 @@
     }
 
     function handleFiles(e) {
-      const files = [...e.target.files];
-      if (files.length > 0) {
-        fileList.classList.remove('hidden');
-        files.forEach(file => {
-          const row = document.createElement('div');
-          row.className = 'flex items-center justify-between p-4 bg-white border border-outline-variant rounded-lg shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300';
-          row.innerHTML = `
-            <div class="flex items-center gap-3">
-              <span class="material-symbols-outlined text-primary">description</span>
-              <div>
-                <p class="font-label-md text-label-md text-on-surface truncate max-w-[200px]">${file.name}</p>
-                <p class="text-label-sm text-on-surface-variant">${(file.size / (1024 * 1024)).toFixed(2)} MB</p>
-              </div>
-            </div>
-            <button class="text-error hover:bg-error-container p-2 rounded-full transition-colors" onclick="this.parentElement.remove()">
-              <span class="material-symbols-outlined" style="font-size: 20px;">delete</span>
-            </button>
-          `;
-          fileList.appendChild(row);
-        });
-      }
+
+  const files = [...e.target.files];
+
+  const errorMessage = document.getElementById('error-message');
+
+  errorMessage.textContent = "";
+
+  fileList.innerHTML = "";
+
+  const allowedTypes = ["application/pdf","image/jpeg","image/png"];
+
+  const maxSize = 5 * 1024 * 1024;
+
+  if(files.length === 0){
+    errorMessage.textContent = "Please select a file.";
+    return;
+  }
+
+  files.forEach(file => {
+
+    // File type validation
+    if(!allowedTypes.includes(file.type)){
+      errorMessage.textContent =
+        "Only PDF, JPG, and PNG files are allowed.";
+      return;
     }
 
+    // File size validation
+    if(file.size > maxSize){
+      errorMessage.textContent =
+        `${file.name} exceeds 5MB limit.`;
+      return;
+    }
+
+    fileList.classList.remove('hidden');
+
+    const row = document.createElement('div');
+
+    row.className =
+      'flex items-center justify-between p-4 bg-white border border-outline-variant rounded-lg shadow-sm';
+
+    row.innerHTML = `
+      <div class="flex items-center gap-3">
+        <span class="material-symbols-outlined text-primary">
+          description
+        </span>
+
+        <div>
+          <p class="font-label-md text-label-md text-on-surface truncate max-w-[200px]">
+            ${file.name}
+          </p>
+
+          <p class="text-label-sm text-on-surface-variant">
+            ${(file.size / (1024 * 1024)).toFixed(2)} MB
+          </p>
+        </div>
+      </div>
+
+      <button class="text-error hover:bg-error-container p-2 rounded-full transition-colors"
+        onclick="this.parentElement.remove()">
+
+        <span class="material-symbols-outlined"
+          style="font-size: 20px;">
+          delete
+        </span>
+      </button>
+    `;
+
+    fileList.appendChild(row);
+  });
+}
+
     submitBtn.addEventListener('click', () => {
-      submitBtn.innerText = 'Uploading...';
-      submitBtn.disabled = true;
-      // Simulated delay for effect
-      setTimeout(() => {
-        alert('Documents submitted successfully for review.');
-        window.location.reload();
-      }, 1500);
-    });
+
+  const files = fileInput.files;
+
+  const errorMessage =
+    document.getElementById('error-message');
+
+  if(files.length === 0){
+    errorMessage.textContent =
+      "Please upload at least one document.";
+
+    return;
+  }
+
+  submitBtn.innerText = 'Uploading...';
+
+  submitBtn.disabled = true;
+
+  setTimeout(() => {
+    alert('Documents submitted successfully for review.');
+    window.location.reload();
+  }, 1500);
+});
   </script>
+
 </body>
 </html>
 
