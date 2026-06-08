@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Notifications - ZitConnect</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@600;700&family=Source+Sans+3:wght@400;600&family=Material+Symbols+Outlined:wght@400;700&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="/static/css/notications.css">
+</head>
+
+<body>
+
+<!-- TOP BAR -->
+<header class="topbar">
+  <div class="left">
+    <div class="logo">zc</div>
+    <h1>Notifications</h1>
+  </div>
+
+  <div class="right">
+    <span class="material-symbols-outlined icon">notifications</span>
+    <img class="avatar" src="https://via.placeholder.com/40" alt="user">
+  </div>
+</header>
+
+<!-- MAIN -->
+<main class="container">
+
+  <h2 class="section-title">Unread</h2>
+
+  <div class="card unread">
+    <img class="avatar-md" src="https://via.placeholder.com/50" />
+    <div class="content">
+      <p><b>Mr. Chanda Musonda</b> joined your <span class="highlight">Calculus II</span> session</p>
+      <small>2 hours ago</small>
+    </div>
+    <span class="dot"></span>
+  </div>
+
+  <div class="card unread">
+    <div class="icon-box">💳</div>
+    <div class="content">
+      <p>Payment of <b>K 250.00</b> confirmed for Organic Chem Lab</p>
+      <small>5 hours ago</small>
+    </div>
+    <span class="dot"></span>
+  </div>
+
+  <h2 class="section-title">Earlier</h2>
+
+  <div class="card">
+    <img class="avatar-md" src="https://via.placeholder.com/50" />
+    <div class="content">
+      <p>New group session: <span class="highlight">Advanced AI</span></p>
+      <small>Yesterday</small>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="icon-box">👤</div>
+    <div class="content">
+      <p>Profile updated successfully</p>
+      <small>2 days ago</small>
+    </div>
+  </div>
+
+  <!-- EMPTY STATE -->
+  <div class="empty">
+    <div class="check">✔</div>
+    <h3>You’re All Caught Up!</h3>
+    <p>Check back later for updates.</p>
+    <button>Notification Settings</button>
+  </div>
+
+</main>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <a href="/">🏠<span>Home</span></a>
+  <a href="#">📅<span>Schedule</span></a>
+  <a href="#">💼<span>Wallet</span></a>
+  <a class="active" href="/notifications">🔔<span>Alerts</span></a>
+  <a href="#">👤<span>Profile</span></a>
+</nav>
+
+<script>
+document.querySelectorAll('.card.unread').forEach(card => {
+  card.addEventListener('click', () => {
+    const dot = card.querySelector('.dot');
+    if (dot) dot.remove();
+    card.classList.remove('unread');
+  });
+});
+</script>
+
+</body>
+</html>
+

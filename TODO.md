@@ -1,7 +1,9 @@
 # TODO
 
-- [ ] Update register1.html layout to remove split-screen divider and make it one blue page.
-- [ ] Move ZC circle to top-left and keep ZitConnect title and form below.
-- [ ] Adjust CSS in static/css/style.css to match new layout (hide left-side, make right-side full-width, remove demarcation).
-- [ ] Quick manual check: register page loads and elements align correctly.
+- [ ] Understand existing notification/rate session UI + JS wiring.
+- [ ] Fix notification behavior expected from the "rate_session" page (submit rating -> show toast/redirect, clear star selection UI issues).
+- [ ] Ensure notifications page is linked from bottom-nav and header, and add correct unread dot + mark-as-read behavior.
+- [ ] Add/adjust CSS for consistent notification/toast styling (reuse existing tailwind + custom CSS files).
+- [ ] Update Flask routes if needed for /notifications (and mark-as-read endpoints, if present).
+- [ ] Test locally by running app.py and checking rating submission + navigation to notifications.
 

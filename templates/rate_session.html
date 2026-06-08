@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rate Session | ZitConnect</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@600;700&family=Source+Sans+3:wght@400;600&family=Material+Symbols+Outlined:wght@400;700&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="/static/css/rate_session.css">
+</head>
+<body>
+
+    <main class="container">
+
+        <!-- Tutor Card -->
+        <section class="tutor-card">
+
+            <div class="tutor-image">
+                <img src="{{ url_for('static', filename='ai1.png') }}" alt="Tutor">
+            </div>
+
+            <div class="tutor-info">
+                <span class="session-label">COMPLETED SESSION</span>
+
+                <h2>Mr. Chanda Musonda</h2>
+
+                <p>
+                    Calculus II • University of Zambia
+                </p>
+            </div>
+
+        </section>
+
+        <!-- Rating Card -->
+        <section class="rating-card">
+
+            <h1>How was your session?</h1>
+
+            <p class="subtitle">
+                Your feedback helps us maintain high teaching standards.
+            </p>
+
+            <div class="stars" id="star-container">
+
+                <span class="material-symbols-outlined star active" data-rating="1">
+                    star
+                </span>
+
+                <span class="material-symbols-outlined star active" data-rating="2">
+                    star
+                </span>
+
+                <span class="material-symbols-outlined star active" data-rating="3">
+                    star
+                </span>
+
+                <span class="material-symbols-outlined star active" data-rating="4">
+                    star
+                </span>
+
+                <span class="material-symbols-outlined star active" data-rating="5">
+                    star
+                </span>
+
+            </div>
+
+            <label for="feedback">
+                Comments (Optional)
+            </label>
+
+            <textarea
+                id="feedback"
+                placeholder="Share your experience with this session..."></textarea>
+
+            <button id="submit-btn">
+                Submit Rating
+                <span class="material-symbols-outlined">
+                    send
+                </span>
+            </button>
+
+        </section>
+
+        <!-- Tags -->
+        <section class="tags">
+
+            <button class="tag">
+                Clear explanations
+            </button>
+
+            <button class="tag">
+                Very patient
+            </button>
+
+            <button class="tag">
+                Great examples
+            </button>
+
+            <button class="tag">
+                On time
+            </button>
+
+        </section>
+
+    </main>
+
+    <!-- Bottom Navigation -->
+
+    <nav class="bottom-nav">
+
+        <a href="#">
+            <span class="material-symbols-outlined">
+                home
+            </span>
+            <small>Home</small>
+        </a>
+
+        <a href="#">
+            <span class="material-symbols-outlined">
+                search
+            </span>
+            <small>Browse</small>
+        </a>
+
+        <a href="#" class="active-nav">
+            <span class="material-symbols-outlined">
+                event_note
+            </span>
+            <small>Sessions</small>
+        </a>
+
+        <a href="#">
+            <span class="material-symbols-outlined">
+                person
+            </span>
+            <small>Profile</small>
+        </a>
+
+    </nav>
+
+    <script>
+
+        const stars =
+            document.querySelectorAll('.star');
+
+        let currentRating = 5;
+
+        function highlightStars(rating){
+
+            stars.forEach(star => {
+
+                const value =
+                    parseInt(star.dataset.rating);
+
+                if(value <= rating){
+
+                    star.classList.add('active');
+
+                } else {
+
+                    star.classList.remove('active');
+
+                }
+
+            });
+
+        }
+
+        stars.forEach(star => {
+
+            star.addEventListener('click', () => {
+
+                currentRating =
+                    parseInt(star.dataset.rating);
+
+                highlightStars(currentRating);
+
+            });
+
+        });
+
+        document
+            .getElementById('submit-btn')
+            .addEventListener('click', () => {
+
+                alert(
+                    `Rating Submitted: ${currentRating} Stars`
+                );
+
+            });
+
+    </script>
+
+</body>
+</html>

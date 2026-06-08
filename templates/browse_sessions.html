@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Tutor Wallet | ZitConnect</title>
+
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+
+<link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;600;700&family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+
+<script id="tailwind-config">
+tailwind.config = {
+  darkMode: "class",
+  theme: {
+    extend: {
+      colors: {
+        outline: "#73777f",
+        "on-tertiary": "#ffffff",
+        "on-surface": "#1a1c1e",
+        "surface-bright": "#faf9fc",
+        "on-primary": "#ffffff",
+        "inverse-primary": "#abc9f2",
+        "on-background": "#1a1c1e",
+        "inverse-surface": "#2f3033",
+        "secondary-container": "#9eceff",
+        "surface-container": "#eeedf1",
+        "on-primary-container": "#87a4cc",
+        "surface-container-low": "#f4f3f6",
+        "on-primary-fixed-variant": "#2a486b",
+        "on-primary-fixed": "#001c37",
+        "on-error-container": "#93000a",
+        "surface-container-high": "#e9e8eb",
+        "on-secondary-container": "#235882",
+        secondary: "#2f628d",
+        "on-secondary-fixed-variant": "#0f4a74",
+        "on-error": "#ffffff",
+        "error-container": "#ffdad6",
+        "surface-container-lowest": "#ffffff",
+        "on-tertiary-container": "#c49b5f",
+        "secondary-fixed": "#cfe5ff",
+        "on-tertiary-fixed": "#291800",
+        "surface-tint": "#436084",
+        primary: "#1a3a5c",
+        "surface-variant": "#e3e2e5",
+        "primary-fixed": "#d2e4ff",
+        "surface-dim": "#dad9dd",
+        "primary-container": "#1a3a5c",
+        error: "#ba1a1a",
+        "secondary-fixed-dim": "#9bcbfc",
+        "tertiary-fixed-dim": "#ecbf80",
+        "on-secondary-fixed": "#001d33",
+        background: "#f0f2f5",
+        "on-secondary": "#ffffff",
+        "inverse-on-surface": "#f1f0f3",
+        "primary-fixed-dim": "#abc9f2",
+        "surface-container-highest": "#e3e2e5",
+        tertiary: "#331f00",
+        surface: "#faf9fc",
+        "on-tertiary-fixed-variant": "#5f410c",
+        "tertiary-fixed": "#ffddb1",
+        "tertiary-container": "#4f3300",
+        "outline-variant": "#e5e7eb",
+        "on-surface-variant": "#43474e"
+      }
+    }
+  }
+}
+</script>
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/browse_sessions.css') }}"/>
+</head>
+
+<body class="bg-[#f0f2f5] text-on-surface">
+
+<header class="fixed top-0 w-full h-16 bg-[#1a3a5c] flex items-center justify-between px-margin-mobile z-50">
+  <div class="flex items-center gap-3">
+    <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center">
+      <span class="text-[#1a3a5c] font-bold text-label-md">zc</span>
+    </div>
+    <h1 class="text-white font-bold text-headline-sm">Wallet</h1>
+  </div>
+  <button class="material-symbols-outlined text-white p-2 hover:opacity-80">notifications</button>
+</header>
+
+<main class="pt-20 pb-28 px-margin-mobile max-w-md mx-auto">
+
+<section class="mb-6">
+  <div class="bg-[#1a3a5c] text-white p-6 rounded-xl relative overflow-hidden shadow-sm">
+    <p class="text-white/70 uppercase mb-2">Available Balance</p>
+    <h2 class="text-white text-[40px] mb-6">K 2,450.00</h2>
+
+    <button class="withdraw-btn w-full h-12 bg-white text-[#1a3a5c] font-bold rounded-lg flex items-center justify-center gap-2">
+      <span class="material-symbols-outlined">payments</span>
+      Withdraw Earnings
+    </button>
+  </div>
+</section>
+
+</main>
+
+<nav class="fixed bottom-0 left-0 w-full flex justify-around items-center px-4 py-2 bg-white border-t h-[72px]">
+  <a class="flex flex-col items-center" href="#"><span class="material-symbols-outlined">home</span><span>Home</span></a>
+  <a class="flex flex-col items-center" href="#"><span class="material-symbols-outlined">calendar_month</span><span>Schedule</span></a>
+  <a class="flex flex-col items-center bg-[#1a3a5c] text-white rounded-full px-5 py-1.5" href="#">
+    <span class="material-symbols-outlined">account_balance_wallet</span>
+    <span>Wallet</span>
+  </a>
+  <a class="flex flex-col items-center" href="#"><span class="material-symbols-outlined">person</span><span>Profile</span></a>
+</nav>
+
+<script>
+document.querySelector('.withdraw-btn').addEventListener('click', function () {
+  const btn = this;
+  const original = btn.innerHTML;
+
+  btn.innerHTML = '<span class="material-symbols-outlined">refresh</span> Processing...';
+  btn.disabled = true;
+
+  setTimeout(() => {
+    btn.innerHTML = '<span class="material-symbols-outlined">check_circle</span> Initiated';
+
+    setTimeout(() => {
+      btn.innerHTML = original;
+      btn.disabled = false;
+    }, 2500);
+  }, 1500);
+});
+</script>
+
+</body>
+</html>
