@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZitConnect - Tutor Dashboard</title>
+    <link rel="stylesheet" href="/static/css/tutor-dashboard.css">
+    <link rel="stylesheet" href="tutor-dashboard.css">
+</head>
+<body>
+    <div class="Dashboard">
+        <div class="left">
+            <div class="Header">
+                <div class="logo-circle"></div>
+                <h1>ZitConnect</h1>
+            </div>
+            <div class="menu-item">
+                <span class="menu-icon">📊</span>
+                <span>Dashboard</span>
+            </div>
+            <div class="menu-item">
+                <span class="menu-icon">📅</span>
+                <span>My Sessions</span>
+            </div>
+            <div class="menu-item">
+                <span class="menu-icon">💰</span>
+                <span>Earnings</span>
+            </div>
+            <div class="menu-item">
+                <span class="menu-icon">📚</span>
+                <span>Course Management</span>
+            </div>
+            <div class="menu-item">
+                <span class="menu-icon">👤</span>
+                <span>Profile</span>
+            </div>
+        </div>
+
+        <div class="right">
+            <div class="Welcome_part">
+                <h2>Welcome, User</h2>
+            </div>
+            
+            <!-- 3 cards in ONE LINE -->
+            <div class="cards-container">
+                <div class="card">
+                    <h3>Total Earnings</h3>
+                    <div class="card-value">0</div>
+                </div>
+                <div class="card">
+                    <h3>Pending Session Requests</h3>
+                    <div class="card-value">2</div>
+                </div>
+                <div class="card">
+                    <h3>Upcoming Sessions</h3>
+                    <div class="card-value">0</div>
+                </div>
+            </div>
+
+            <div class="earnings-summary">
+                <div class="earnings-summary-header">
+                    <h3>My Earnings Summary</h3>
+                </div>
+                <div class="earnings-summary-body">
+                    <div>
+                        <span class="earnings-label">Total earned this month</span>
+                        <div class="earnings-amount">K1,250</div>
+                    </div>
+                    <a href="wallet.html" class="wallet-link">Go to Wallet</a>
+                </div>
+            </div>
+
+           
+            <div class="group-sessions">
+                <div class="group-header">
+                    <h3>My Group Sessions</h3>
+                </div>
+                <table class="session-table">
+                    <thead>
+                        <tr>
+                            <th>Session</th>
+                            <th>Date</th>
+                            <th>Time</th>
+                            <th>Enrolled</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>My Group Session</td>
+                            <td>June 10</td>
+                            <td>4:00 PM</td>
+                            <td>12</td>
+                        </tr>
+                        <tr>
+                            <td>Advanced Java</td>
+                            <td>June 12</td>
+                            <td>6:00 PM</td>
+                            <td>8</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pending Session Requests -->
+            <div class="bottom">
+                <div class="pending-header">
+                    <h3>Pending Session Requests</h3>
+                </div>
+                <div class="Container">
+                    <h3>Student</h3>
+                    <h3>Course</h3>
+                    <h3>Date</h3>
+                    <h3>Type</h3>
+                    <h3>Actions</h3>
+                </div>
+
+                <div class="session-row">
+                    <span>John Doe</span>
+                    <span>CS150</span>
+                    <span>June 14</span>
+                    <span>1:1</span>
+                    <div class="action-buttons">
+                        <button class="accept-btn">Accept</button>
+                        <button class="decline-btn">Decline</button>
+                    </div>
+                </div>
+                <div class="session-row">
+                    <span>Mary Banda</span>
+                    <span>CS270</span>
+                    <span>June 15</span>
+                    <span>Group</span>
+                    <div class="action-buttons">
+                        <button class="accept-btn">Accept</button>
+                        <button class="decline-btn">Decline</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

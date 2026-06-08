@@ -20,6 +20,24 @@ body{
 flex-direction: row;
 
 }
+.notification{
+  position:relative;
+  display:flex;
+  align-items:center;
+  margin-left:10px;
+  cursor:pointer;
+}
+.notification .badge{
+  position:absolute;
+  top:-6px;
+  right:-6px;
+  background: #ff4d4d;
+  color:#fff;
+  font-size:11px;
+  padding: 2px 6px;
+  border-radius:12px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+} 
 .left-section{
   display:flex;
   align-items:center;
@@ -83,7 +101,7 @@ background: transparent;
 font-size:15px;
 
 }
-.filter-calender{
+.filter-calendar{
   display:flex;
   margin-left:2px;
   gap:40px;
@@ -180,6 +198,45 @@ color:#7c7a7a
   cursor: pointer;
 }
 
+.joined-sessions{
+  background: #ffffff;
+  border-radius: 15px;
+  padding: 18px;
+  margin: 20px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+}
+.joined-sessions h2{
+  color: #49709C;
+  margin-bottom: 12px;
+}
+.session-list{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+.session-item{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  border:1px solid #e6edf3;
+  padding:12px 14px;
+  border-radius:10px;
+}
+.session-meta{
+  color:#6b7280;
+  font-size:13px;
+}
+.meeting-link{
+  background:#49709C;
+  color:#fff;
+  text-decoration:none;
+  padding:8px 10px;
+  border-radius:8px;
+}
+.meeting-link:hover{
+  background:#3f648a;
+}
+
 @media(max-width:786px){
   .navbar{
     flex-wrap:wrap;
@@ -246,7 +303,7 @@ color:#7c7a7a
     margin-left: 5px;
     width:60%;
   }
-  .filter-calender{
+  .filter-calendar{
     gap:2px;
     margin-right:5px;
     margin-left:1px;
@@ -276,3 +333,5 @@ color:#7c7a7a
     font-size:14px;
   }
 }
+
+

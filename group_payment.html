@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <title> Group session payment</title>
+ <link rel="stylesheet" href="group_payment.css">
+ <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+ <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" >
+</head>
+<body>
+  <div class="navbar">
+      <button class="back-arrow" aria-label="Go back">
+          <span class="material-symbols-outlined">arrow_back</span>
+    </button>
+    <div class="logo">
+      ZitConnect
+    </div>
+    <div class="nav-icons">
+      <i class="fas fa-home"></i>
+      <i class="fas fa-calendar"></i>
+      <i class="fas fa-bell"></i>
+      <i class="fas fa-user"></i>
+    </div>
+  </div>
+  <div class="container">
+    <h1> Group Session Payment</h1>
+    <div class="session-details">
+      <h2>Session-details</h2>
+      <p><strong>Tutor:</strong>  Kabwe Mwansa </p>
+      <p><strong>CourseName:</strong>  CS150-Introduction to programming</p>
+      <p><strong>SceduledDate:</strong>  25 August 2025</p>
+      <p><strong>ScheduledTime:</strong>  12:00hrs</p>
+       <p><strong>MaxCapacity:</strong>  30</p>
+      <p><strong>PricePerStudent:</strong> ZMW150</p>
+      <p><strong>MeetingPlatform:</strong> whatsapp</p>
+      <p><strong>AccessLink:</strong> <a href="https://wa.me/1234567890" target="_blank">  Contact Tutor on WhatsApp</a></p>
+
+    </div>
+    <form>
+      <div class="mobile">
+        <label> Mobile Money Number:</label>
+      <input type="radio" placeholder="Enter Mobile Money Number">
+      </div>
+      
+
+      <div class="or">
+        OR
+      </div>
+      <div class="card">
+         <label> Card Number:</label>
+      <input type="radio" placeholder="Enter Card Number">
+      </div>
+     
+      <div class="note">
+        <strong> Important: </strong>
+        Your spot is only confirmed after payment is recieved.
+      </div>
+      <button type="submit" class="btn">
+        Pay Now
+      </button>
+    </form>
+  </div>
+</body>
+</html>

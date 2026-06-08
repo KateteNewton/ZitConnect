@@ -1,0 +1,104 @@
+*{
+    margin:0;
+    padding:0;
+    box-sizing: border-box;
+}
+body{
+    font:Arial, sans-serif;
+    background:#eef2f5 ;
+}
+.navbar{
+    display: flex;
+    justify-content: space-between;
+    background-color:#49709C ;
+    color:white;
+    padding: 10px 20px;
+    font-weight: bold;
+    margin-bottom: 40px;
+  
+}
+.logo{
+    display:flex;
+    font-size:28px;
+    gap:10px;
+}
+.back-arrow{
+    border-radius: 18px;
+    border:none;
+    padding:7px;
+    color:dimgrey;
+    justify-content:center;
+    margin-left:5px;
+}
+table{
+    width: 100%;
+    border-collapse:collapse;
+    background:white;
+    table-layout: auto;
+    border-radius:15px;
+}
+.Container{
+    width:100%;
+    margin:0;
+    padding:0 20px;
+    text-align:center;
+}
+th{
+    background:#555;
+    color:white;
+    padding:10px;
+}
+td{
+    border:1px solid #ddd;
+    text-align:center;
+    padding:10px;
+
+}
+
+
+input[type="checkbox"]{
+    width:15px;
+    height:15px;
+    cursor:pointer;
+    border:none;
+    padding:10px;
+    accent-color: #4caf50;
+}
+.instruction{
+    margin-bottom:20px;
+    color:#49709C;
+    margin-left:10px;
+}
+h1{
+    margin-bottom:20px;
+    color:#49709C;
+    margin-left:10px;
+}
+.calender-wrapper{
+    background:white;
+    border-radius:15px;
+    overflow-x:auto;
+    box-shadow:0 4px 10px rgba(0,0,0,0.1);
+    width:100%;
+}
+
+.calender{
+    width:100%;
+    min-width: max-content;
+}
+@media(max-width:768px){
+    .navbar{
+        display:flex;
+        flex-direction:row;
+        width:100%;
+    }
+  table{
+    width:80%;
+    margin:0 auto;
+
+  }
+  .Container{
+    width:100%;
+    padding:15px;
+  }
+}
