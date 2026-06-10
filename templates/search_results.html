@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Search Results - ZitConnect</title>
+    <link rel="stylesheet" href="/static/css/student_dashbord.css">
+    <link rel="stylesheet" href="/static/css/search_results.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        
+    </style>
+</head>
+<body>
+  {% include 'student_nav.html' %}
+
+    <div class="page-wrapper">
+        <!-- Left Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-profile">
+                <div class="sidebar-avatar">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div class="sidebar-name">{{ fullName or 'Student' }}</div>
+            </div>
+            <ul class="sidebar-menu">
+                <li>
+                    <a href="/student-dashboard">
+                        <i class="fas fa-home"></i>
+                        <span>Home</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/upcoming-sessions">
+                        <i class="fas fa-calendar-check"></i>
+                        <span>Sessions</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#saved">
+                        <i class="fas fa-bookmark"></i>
+                        <span>Saved</span>
+                    </a>
+                </li>
+                <li>
+                  <a href="/logout">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                  </a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="content">
+            <div class="content-wrapper">
+                <!-- Search Summary Header -->
+                <div class="search-summary">
+                    <div>
+                        <h2><i class="fas fa-search" style="margin-right: 8px; color: #49709c;"></i> Search Results</h2>
+                        <p>Showing tutors for course code</p>
+                    </div>
+                    <div class="course-badge">
+                        <i class="fas fa-book-open"></i> {{ course_code }}
+                    </div>
+                </div>
+
+                <!-- Tutors Grid -->
+                <div class="cards">
+                    {% if tutors and tutors|length > 0 %}
+                        {% for tutor in tutors %}
+                            <div class="card">
+                                <div class="profile">
+                                    <div class="avatar">
+                                        {% if tutor.profilePicture %}
+                                            <img src="/static/{{ tutor.profilePicture }}" alt="avatar"/>
+                                        {% else %}
+                                            <i class="fas fa-user"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div class="profile-info">
+                                        <strong>{{ tutor.fullName }}</strong>
+                                        {% if tutor.verificationStatus == 'approved' %}
+                                            <span class="badge">verified</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="rating">
+                                    ⭐ {{ "%.1f"|format(tutor.averageRating) if tutor.averageRating else "New" }} 
+                                    <span class="course-count">Teaches {{ tutor.courseCode }}</span>
+                                </div>
+                                
+                                <div class="desc">
+                                    {% if tutor.bio %}
+                                        {{ tutor.bio[:100] }}{% if tutor.bio|length > 100 %}...{% endif %}
+                                    {% else %}
+                                        Professional tutor specializing in {{ tutor.courseCode }}. Book a session to improve your skills!
+                                    {% endif %}
+                                </div>
+
+                                <div class="tags">
+                                    <span class="tag">{{ tutor.courseCode }}</span>
+                                    {% if tutor.additional_courses %}
+                                        {% for course in tutor.additional_courses[:1] %}
+                                            <span class="tag">{{ course }}</span>
+                                        {% endfor %}
+                                    {% endif %}
+                                </div>
+
+                                <div class="card-actions">
+                                    <a class="btn primary-btn" href="{{ url_for('view_tutor', tutorID=tutor.tutorID) }}">View profile</a>
+                                    <a class="btn secondary-btn" href="{{ url_for('book_session') }}?tutorID={{ tutor.tutorID }}">Book</a>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-state" style="grid-column: 1 / -1;">
+                            <i class="fas fa-chalkboard-user"></i>
+                            <h3>No tutors found</h3>
+                            <p>We couldn't find any approved tutors for course code <strong>{{ course_code }}</strong>.</p>
+                            <p>Try searching for another course code or check back later.</p>
+                            <a href="/student-dashboard" class="btn primary-btn" style="display: inline-block; margin-top: 16px; text-decoration: none;">
+                                <i class="fas fa-arrow-left"></i> Back to Dashboard
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Optional: Recent searches or suggestions (simple addition) -->
+                {% if tutors and tutors|length > 0 %}
+                    <div style="margin-top: 24px; padding: 16px 0; border-top: 1px solid #e5e7eb;">
+                        <p style="font-size: 13px; color: #65676b;">
+                            <i class="fas fa-info-circle"></i> Can't find the right tutor? 
+                            <a href="/student-dashboard" style="color: #49709c; text-decoration: none;">Browse all tutors</a> or try a different course code.
+                        </p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Preserve search functionality on navbar search form
+        const searchForm = document.querySelector('.search-container form');
+        if (searchForm) {
+            searchForm.addEventListener('submit', function(e) {
+                const input = this.querySelector('input');
+                if (input && input.value.trim() === '') {
+                    e.preventDefault();
+                    alert('Please enter a course code to search');
+                }
+            });
+        }
+    </script>
+</body>
+</html>

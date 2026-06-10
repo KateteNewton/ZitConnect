@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tutor Profile - ZitConnect</title>
+    <link rel="stylesheet" href="/static/css/tutor_dashboard.css">
+    <link rel="stylesheet" href="/static/css/tutor_profile.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+</head>
+<body>
+    <div class="Dashboard">
+        <!-- Sidebar -->
+        <div class="left">
+            <div class="Header">
+                <div class="logo-circle"></div>
+                <h1>ZitConnect</h1>
+            </div>
+            <a href="/tutor-dashboard" class="menu-item" style="text-decoration: none; color: inherit;">
+                <i class="bi bi-speedometer2 menu-icon"></i>
+                <span>Dashboard</span>
+            </a>
+            <div class="menu-item">
+                <i class="bi bi-calendar-check menu-icon"></i>
+                <span>My Sessions</span>
+            </div>
+            <div class="menu-item">
+                <i class="bi bi-currency-dollar menu-icon"></i>
+                <span>Earnings</span>
+            </div>
+            <div class="menu-item">
+                <i class="bi bi-journal-bookmark menu-icon"></i>
+                <span>Course Management</span>
+            </div>
+            <a href="/tutor-profile" class="menu-item active-menu" style="text-decoration: none; color: inherit;">
+                <i class="bi bi-person-circle menu-icon"></i>
+                <span>Profile</span>
+            </a>
+            <a href="/logout" class="menu-item logout-item" style="text-decoration: none; color: inherit;">
+                <i class="bi bi-box-arrow-right menu-icon"></i>
+                <span>Logout</span>
+            </a>
+        </div>
+
+        <!-- Main Content -->
+        <div class="right">
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <div class="Welcome_part">
+                <h2>My Profile</h2>
+            </div>
+
+            <!-- Tabs -->
+            <div class="profile-tabs">
+                <button class="profile-tab-btn active" onclick="switchTab('profile-info')">
+                    <i class="bi bi-person-fill"></i> Profile Info
+                </button>
+                <button class="profile-tab-btn" onclick="switchTab('documents')">
+                    <i class="bi bi-file-earmark-pdf"></i> Documents
+                </button>
+                <button class="profile-tab-btn" onclick="switchTab('courses')">
+                    <i class="bi bi-book"></i> Courses
+                </button>
+            </div>
+
+            <!-- Profile Info Tab -->
+            <div id="profile-info" class="profile-tab-content active">
+                <div class="profile-header">
+                    <div class="profile-pic-container">
+                        <div class="profile-pic">
+                            {% if profilePicture %}
+                                <img src="/static/{{ profilePicture }}" alt="Profile Picture" id="profilePreview" class="profile-img">
+                            {% else %}
+                                <i class="bi bi-person-circle" id="profilePreview"></i>
+                            {% endif %}
+                        </div>
+                        <div class="profile-pic-overlay">
+                            <form method="POST" enctype="multipart/form-data" id="profilePicForm" class="inline-form">
+                                <input type="hidden" name="action" value="upload_profile_pic">
+                                <input type="file" id="profilePicInput" name="profilePic" accept=".jpg,.jpeg,.png" style="display: none;">
+                                <button type="button" class="pic-upload-btn" onclick="document.getElementById('profilePicInput').click()">
+                                    <i class="bi bi-camera-fill"></i> Change Photo
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="profile-header-info">
+                        <h1>{{ fullName }}</h1>
+                        <div class="profile-badge">
+                            <span class="badge-status badge-{{ verificationStatus }}">
+                                <i class="bi bi-check-circle"></i> {{ verificationStatus|capitalize }}
+                            </span>
+                        </div>
+                        <div class="profile-rating">
+                            {% for i in range(5) %}
+                                {% if i < averageRating|int %}
+                                    <i class="bi bi-star-fill"></i>
+                                {% elif i < averageRating %}
+                                    <i class="bi bi-star-half"></i>
+                                {% else %}
+                                    <i class="bi bi-star"></i>
+                                {% endif %}
+                            {% endfor %}
+                            <span class="rating-value">{{ "%.1f"|format(averageRating) }} out of 5</span>
+                        </div>
+                    </div>
+                </div>
+
+                <form method="POST" class="profile-form">
+                    <input type="hidden" name="action" value="update_info">
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="fullName">Full Name</label>
+                            <input type="text" id="fullName" name="fullName" value="{{ fullName }}" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="username">Username</label>
+                            <input type="text" id="username" name="username" value="{{ username }}" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="email">Email (View Only)</label>
+                            <input type="email" id="email" name="email" value="{{ email }}" disabled>
+                        </div>
+                        <div class="form-group">
+                            <label for="password">New Password</label>
+                            <input type="password" id="password" name="password" placeholder="Leave blank to keep current">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group" style="width: 100%;">
+                            <label for="bio">About (Bio)</label>
+                            <textarea id="bio" name="bio" placeholder="Write a short description about yourself..." style="min-height: 100px; width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd; font-family: Arial, sans-serif;">{{ bio or '' }}</textarea>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-submit">
+                        <i class="bi bi-check-lg"></i> Save Changes
+                    </button>
+                </form>
+            </div>
+
+            <!-- Documents Tab -->
+            <div id="documents" class="profile-tab-content">
+                <div class="section-header">
+                    <h3><i class="bi bi-file-earmark-pdf"></i> Verification Documents</h3>
+                    <p>Upload documents to verify your qualifications and get approved as a tutor</p>
+                </div>
+
+                <div class="upload-card">
+                    <form method="POST" enctype="multipart/form-data" class="upload-form">
+                        <input type="hidden" name="action" value="upload_doc">
+                        <div class="file-input-wrapper">
+                            <i class="bi bi-cloud-arrow-up"></i>
+                            <p>Upload Document</p>
+                            <input type="file" id="document" name="document" accept=".pdf,.jpg,.jpeg,.png" required>
+                            <small>PDF, JPG, or PNG (Max 5MB)</small>
+                        </div>
+                        <button type="submit" class="btn-submit">Upload</button>
+                    </form>
+                </div>
+
+                <div class="documents-section">
+                    <h4>Your Documents</h4>
+                    {% if documents %}
+                        <div class="documents-list">
+                            {% for doc in documents %}
+                                <div class="document-card">
+                                    <div class="doc-icon">
+                                        <i class="bi bi-file-earmark-pdf"></i>
+                                    </div>
+                                    <div class="doc-info">
+                                        <p class="doc-name">{{ doc.filePath.split('/')[-1] }}</p>
+                                        <p class="doc-date">Uploaded: {{ doc.uploadDate.strftime('%d %b %Y') if doc.uploadDate else 'N/A' }}</p>
+                                    </div>
+                                    <div class="doc-status">
+                                        <span class="status-badge status-{{ doc.approvalStatus }}">
+                                            {{ doc.approvalStatus|capitalize }}
+                                        </span>
+                                    </div>
+                                    <a href="/static/{{ doc.filePath }}" target="_blank" class="btn-view">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="empty-state">
+                            <i class="bi bi-inbox"></i>
+                            <p>No documents uploaded yet</p>
+                            <small>Upload your result slip or transcript to get verified</small>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Courses Tab -->
+            <div id="courses" class="profile-tab-content">
+                <div class="section-header">
+                    <h3><i class="bi bi-book"></i> Courses You Teach</h3>
+                    <p>Manage the courses you're qualified to tutor</p>
+                </div>
+
+                {% if courses %}
+                    <div class="courses-grid">
+                        {% for course in courses %}
+                            <div class="course-card">
+                                <div class="course-code">{{ course.courseCode }}</div>
+                                <div class="course-name">{{ course.courseName }}</div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="empty-state">
+                        <i class="bi bi-book"></i>
+                        <p>No courses added yet</p>
+                        <small>Add courses you're qualified to tutor</small>
+                    </div>
+                {% endif %}
+
+                <a href="/manage-courses" class="btn-submit">
+                    <i class="bi bi-pencil-square"></i> Manage Courses
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function switchTab(tabName) {
+            const contents = document.querySelectorAll('.profile-tab-content');
+            contents.forEach(content => content.classList.remove('active'));
+
+            const buttons = document.querySelectorAll('.profile-tab-btn');
+            buttons.forEach(btn => btn.classList.remove('active'));
+
+            document.getElementById(tabName).classList.add('active');
+            event.target.closest('.profile-tab-btn').classList.add('active');
+        }
+
+        // Handle profile picture upload with preview
+        document.getElementById('profilePicInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                // Validate file type
+                const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+                if (!validTypes.includes(file.type)) {
+                    alert('Please upload a valid image (JPG or PNG)');
+                    return;
+                }
+
+                // Show preview
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const preview = document.getElementById('profilePreview');
+
+                    // If it's an icon, replace it with img
+                    if (preview.tagName === 'I') {
+                        const img = document.createElement('img');
+                        img.id = 'profilePreview';
+                        img.className = 'profile-img';
+                        img.alt = 'Profile Picture';
+                        img.src = event.target.result;
+                        preview.replaceWith(img);
+                    } else {
+                        // If it's already an img, just update src
+                        preview.src = event.target.result;
+                    }
+                };
+                reader.readAsDataURL(file);
+
+                // Auto-submit form after brief delay
+                setTimeout(() => {
+                    document.getElementById('profilePicForm').submit();
+                }, 500);
+            }
+        });
+    </script>
+</body>
+</html>

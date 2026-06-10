@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Book Session</title>
+    <link rel="stylesheet" href="/static/css/student_dashbord.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  </head>
+  <body>
+    {% include 'student_nav.html' %}
+
+    <div class="page-wrapper">
+      <div class="sidebar">
+        <div class="sidebar-profile">
+          <div class="sidebar-avatar">
+            <i class="fas fa-user"></i>
+          </div>
+          <div class="sidebar-name">{{ fullName or 'Student' }}</div>
+        </div>
+        <ul class="sidebar-menu">
+          <li>
+            <a href="/student-dashboard">
+              <i class="fas fa-home"></i>
+              <span>Home</span>
+            </a>
+          </li>
+          <li>
+            <a href="/upcoming-sessions">
+              <i class="fas fa-calendar-check"></i>
+              <span>Sessions</span>
+            </a>
+          </li>
+          <li>
+            <a href="#saved">
+              <i class="fas fa-bookmark"></i>
+              <span>Saved</span>
+            </a>
+          </li>
+          <li>
+                  <a href="/logout">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                  </a>
+                </li>
+        </ul>
+      </div>
+
+      <div class="content">
+        <div class="content-wrapper" style="max-width: 600px;">
+          <div class="card" style="padding: 24px;">
+            <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 20px;">Request a one-to-one session</h2>
+            <form action="/book-session" method="post" class="booking-form">
+              <input type="hidden" name="tutorID" value="{{ tutor_id or '' }}" />
+
+              <div>
+                <label>Select Course</label>
+                <select name="courseCode" required>
+                  <option value="">Choose course</option>
+                  <option value="CS150">CS150 - Introduction to Programming</option>
+                  <option value="CS130">CS130 - Software Engineering</option>
+                  <option value="CS350">CS350 - Java</option>
+                  <option value="CS225">CS225 - Operating Systems Concept</option>
+                  <option value="CS230">CS230 - Software Engineering</option>
+                  <option value="CS235">CS235 - Database Systems</option>
+                  <option value="CS250">CS250 - Object Oriented Programming</option>
+                  <option value="CS270">CS270 - Digital Design</option>
+                  <option value="CS120">CS120 - Introduction to Computer Systems</option>
+                </select>
+              </div>
+
+              <div>
+                <label>Select Date</label>
+                <input type="date" name="scheduledDate" required />
+              </div>
+
+              <div>
+                <label>Select Time Slot</label>
+                <select name="timeSlot" required>
+                  <option value="">Choose time</option>
+                  <option value="08:00:00">08:00 - 09:00</option>
+                  <option value="10:00:00">10:00 - 11:00</option>
+                  <option value="14:00:00">14:00 - 15:00</option>
+                  <option value="17:00:00">17:00 - 19:00</option>
+                </select>
+              </div>
+
+              <div>
+                <label>Session Type</label>
+                <select name="sessionType" required>
+                  <option value="individual">Individual</option>
+                  <option value="group">Group</option>
+                </select>
+              </div>
+
+              <button type="submit" class="btn primary-btn" style="width: 100%; margin-top: 10px;">Confirm Request</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

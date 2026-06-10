@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Student Dashboard - ZitConnect</title>
+    <link rel="stylesheet" href="/static/css/student_dashbord.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  </head>
+  <body>
+    {% include 'student_nav.html' %}
+
+    <div class="page-wrapper">
+      <div class="sidebar">
+        <div class="sidebar-profile">
+          <div class="sidebar-avatar">
+            <i class="fas fa-user"></i>
+          </div>
+          <div class="sidebar-name">{{ fullName or 'Student' }}</div>
+        </div>
+        <ul class="sidebar-menu">
+          <li>
+            <a href="/student-dashboard">
+              <i class="fas fa-home"></i>
+              <span>Home</span>
+            </a>
+          </li>
+          <li>
+            <a href="/upcoming-sessions">
+              <i class="fas fa-calendar-check"></i>
+              <span>Sessions</span>
+            </a>
+          </li>
+          <li>
+            <a href="#saved">
+              <i class="fas fa-bookmark"></i>
+              <span>Saved</span>
+            </a>
+          </li>
+          <li>
+                  <a href="/logout">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                  </a>
+                </li>
+        </ul>
+      </div>
+
+      <div class="content">
+        <div class="content-wrapper">
+          <h1 style="font-size: 28px; font-weight: 800; margin-bottom: 20px; color: #000;">Tutors</h1>
+
+          <div class="cards">
+            {% if tutors and tutors|length > 0 %}
+              {% for tutor in tutors %}
+                <div class="card">
+                  <div class="profile">
+                    <div class="avatar">
+                      {% if tutor.profilePicture %}
+                        <img src="/static/{{ tutor.profilePicture }}" alt="avatar"/>
+                      {% else %}
+                        <i class="fas fa-user"></i>
+                      {% endif %}
+                    </div>
+                    <div class="profile-info">
+                      <strong>{{ tutor.fullName }}</strong>
+                      {% if tutor.verificationStatus == 'approved' %}
+                        <span class="badge">verified</span>
+                      {% endif %}
+                    </div>
+                  </div>
+
+                  <div class="rating">⭐ {{ tutor.averageRating }} <span class="course-count">({{ tutor.courses|length }} Courses)</span></div>
+                  {% if tutor.bio %}
+                    <div class="desc">{{ tutor.bio[:80] }}{% if tutor.bio|length > 80 %}...{% endif %}</div>
+                  {% else %}
+                    <div class="desc">{{ tutor.courses[0].courseName if tutor.courses else 'Tutor' }}</div>
+                  {% endif %}
+
+                  <div class="tags">
+                    {% for c in tutor.courses[:2] %}
+                      <span class="tag">{{ c.courseCode }}</span>
+                    {% endfor %}
+                  </div>
+
+                  <div class="card-actions">
+                    <a class="btn primary-btn" href="{{ url_for('view_tutor', tutorID=tutor.tutorID) }}">View profile</a>
+                    <a class="btn secondary-btn" href="{{ url_for('book_session') }}?tutorID={{ tutor.tutorID }}">Book</a>
+                  </div>
+                </div>
+              {% endfor %}
+            {% else %}
+              <div class="empty-state" style="grid-column: 1 / -1;">No tutors available yet. Try searching by course code.</div>
+            {% endif %}
+          </div>
+
+          <!-- Student sessions table - Responsive wrapper 
+          {% if sessions and sessions|length > 0 %}
+            <div class="card-header" style="margin-top: 30px;">
+              <h3>Your Sessions</h3>
+            </div>
+            <div class="table-responsive-wrapper">
+              <table class="sessions-table" style="margin-bottom: 30px;">
+                <thead>
+                  <tr>
+                    <th>Course</th>
+                    <th>Tutor</th>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for s in sessions %}
+                    <tr>
+                      <td data-label="Course">{{ s.courseCode }}</td>
+                      <td data-label="Tutor">{{ s.tutorName }}</td>
+                      <td data-label="Date">{{ s.scheduledDate }}</td>
+                      <td data-label="Time">{{ s.scheduledTime }}</td>
+                      <td data-label="Status"><span class="status-pill status-{{ s.status }}">{{ s.status }}</span></td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% endif %}
+        </div>
+      </div> -->
+    </div>
+  </body>
+</html>

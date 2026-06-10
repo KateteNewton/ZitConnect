@@ -1,16 +1,1427 @@
-from flask import Flask, render_template 
+from flask import Flask, jsonify, render_template, request, redirect, session, flash, url_for
+from flask_mysqldb import MySQL
+from datetime import timedelta
+from werkzeug.utils import secure_filename
+import os
+import re
 
 app = Flask(__name__)
+
+# ============ Configuration ============
+app.secret_key = 'zitconnect_secret_key_2024'
+app.permanent_session_lifetime = timedelta(minutes=30)
+
+# Database Configuration
+app.config['MYSQL_HOST'] = 'localhost'
+app.config['MYSQL_USER'] = 'root'
+app.config['MYSQL_PASSWORD'] = ''
+app.config['MYSQL_DB'] = 'zitconnect_db'
+
+mysql = MySQL(app)
+
+# ============ Helper Functions ============
+def validate_email(email):
+    """Validate email format"""
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    return re.match(pattern, email) is not None
+
+def get_programs():
+    """Fetch all programs from database"""
+    try:
+        cursor = mysql.connection.cursor()
+        cursor.execute("SELECT programID, programName FROM program ORDER BY programName")
+        programs = cursor.fetchall()
+        cursor.close()
+        return programs
+    except Exception as e:
+        print(f"Error fetching programs: {e}")
+        return []
+
+def get_schools():
+    """Fetch all schools from database"""
+    try:
+        cursor = mysql.connection.cursor()
+        cursor.execute("SELECT schoolID, schoolName FROM school ORDER BY schoolName")
+        schools = cursor.fetchall()
+        cursor.close()
+        return schools
+    except Exception as e:
+        print(f"Error fetching schools: {e}")
+        return []
+
+ALLOWED_EXTENSIONS = {'pdf', 'jpg', 'jpeg', 'png'}
+
+app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads')
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+# ============ Routes ============
 
 @app.route('/')
 def home():
     return render_template('register1.html')
 
-@app.route('/tutor_verification')
-def tutor_verification():
-    return render_template('tutor_Verification.html')
+@app.route('/register1')
+def register1_redirect():
+    """Legacy /register1 route redirect to /register"""
+    return redirect('/register')
 
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    """Register Step 1 - Collect user information"""
+    if request.method == 'POST':
+        try:
+            # Get form data
+            name = request.form.get('name', '').strip()
+            username = request.form.get('username', '').strip()
+            email = request.form.get('email', '').strip()
+            password = request.form.get('password', '')
+            confirm_password = request.form.get('confirm_password', '')
+            
+            # Validation
+            if not all([name, username, email, password, confirm_password]):
+                flash('All fields are required', 'error')
+                return render_template('register1.html')
+            
+            if password != confirm_password:
+                flash('Passwords do not match', 'error')
+                return render_template('register1.html')
+            
+            if len(password) < 6:
+                flash('Password must be at least 6 characters', 'error')
+                return render_template('register1.html')
+            
+            if not validate_email(email):
+                flash('Invalid email format', 'error')
+                return render_template('register1.html')
+            
+            # Check if username already exists
+            cursor = mysql.connection.cursor()
+            cursor.execute("SELECT userID FROM user WHERE userName = %s", (username,))
+            if cursor.fetchone():
+                cursor.close()
+                flash('Username already exists. Please choose a different one.', 'error')
+                return render_template('register1.html')
+            
+            # Check if email already exists
+            cursor.execute("SELECT userID FROM user WHERE email = %s", (email,))
+            if cursor.fetchone():
+                cursor.close()
+                flash('Email already exists. Please use a different email.', 'error')
+                return render_template('register1.html')
+            
+            cursor.close()
+            
+            # Store in session
+            session['name'] = name
+            session['username'] = username
+            session['email'] = email
+            session['password'] = password
+            
+            return redirect('/register/step2')
+        except Exception as e:
+            flash(f'An error occurred: {str(e)}', 'error')
+            return render_template('register1.html')
+    
+    return render_template('register1.html')
+
+@app.route('/register/step2', methods=['GET'])
+def register_step2():
+    """Register Step 2 - Select program, school, and role"""
+    # Check if user has completed step 1
+    if 'email' not in session:
+        flash('Please complete step 1 first', 'error')
+        return redirect('/register')
+    
+    programs = get_programs()
+    schools = get_schools()
+    
+    return render_template('register2.html', programs=programs, schools=schools)
+
+#Fetch programs and courses based on school selection for dynamic dropdowns in registration step 2
+@app.route('/api/programs/<int:schoolID>')
+def api_get_programs(schoolID):
+    """API endpoint to get programs for a specific school"""
+    try:
+        cursor = mysql.connection.cursor()
+        cursor.execute(
+            "SELECT programID, programName FROM program WHERE schoolID = %s ORDER BY programName",
+            (schoolID,)
+        )
+        programs = cursor.fetchall()
+        cursor.close()
+        
+        programs_list = [{'programID': p[0], 'programName': p[1]} for p in programs]
+        return {'programs': programs_list}
+    except Exception as e:
+        print(f"Error fetching programs: {e}")
+        return {'programs': [], 'error': str(e)}
+
+@app.route('/api/courses/<int:schoolID>')
+def api_get_courses(schoolID):
+    """API endpoint to get courses for a specific school"""
+    try:
+        cursor = mysql.connection.cursor()
+        cursor.execute(
+            "SELECT courseCode, courseName FROM course WHERE schoolID = %s ORDER BY courseCode",
+            (schoolID,)
+        )
+        courses = cursor.fetchall()
+        cursor.close()
+        
+        courses_list = [{'courseCode': c[0], 'courseName': c[1]} for c in courses]
+        return {'courses': courses_list}
+    except Exception as e:
+        print(f"Error fetching courses: {e}")
+        return {'courses': [], 'error': str(e)}
+
+# Update the register_complete route
+@app.route('/register/complete', methods=['POST'])
+def register_complete():
+    """Complete registration - Save to database"""
+    # Verify step 1 data exists
+    if 'email' not in session:
+        flash('Session expired. Please register again.', 'error')
+        return redirect('/register')
+    
+    try:
+        # Get data from session
+        full_name = session.get('name', '')
+        user_name = session.get('username', '')
+        email = session.get('email', '')
+        password = session.get('password', '')
+        
+        # Get role from form
+        role = request.form.get('role', '').strip()
+        
+        if not role:
+            flash('Please select a role', 'error')
+            return redirect('/register/step2')
+        
+        cursor = mysql.connection.cursor()
+        
+        # Insert into user table
+        cursor.execute(
+            "INSERT INTO user (fullName, userName, email, password, role, profilePicture) "
+            "VALUES (%s, %s, %s, %s, %s, %s)",
+            (full_name, user_name, email, password, role, None)
+        )
+        user_id = cursor.lastrowid
+
+        # Create role-specific records
+        if role == 'student':
+            program = request.form.get('program', '').strip()
+            if not program:
+                flash('Please select a program', 'error')
+                return redirect('/register/step2')
+            
+            cursor.execute(
+                "INSERT INTO student (studentID, programID) VALUES (%s, %s)",
+                (user_id, program)
+            )
+            
+        elif role == 'tutor':
+            # Get tutor-specific data
+            school = request.form.get('tutor_school', '').strip()
+            program = request.form.get('tutor_program', '').strip()
+            selected_courses = request.form.getlist('tutor_courses')
+            
+            if not school or not program:
+                flash('Please select school and program', 'error')
+                return redirect('/register/step2')
+            
+            if not selected_courses:
+                flash('Please select at least one course you want to tutor', 'error')
+                return redirect('/register/step2')
+            
+            # Create tutor record
+            cursor.execute(
+                "INSERT INTO tutor (tutorID, verificationStatus, averageRating) VALUES (%s, %s, %s)",
+                (user_id, 'pending', 0.00)
+            )
+            
+            # Insert selected courses into tutorcourse table
+            for course_code in selected_courses:
+                cursor.execute(
+                    "INSERT INTO tutorcourse (tutorID, courseCode, gradeObtained) VALUES (%s, %s, %s)",
+                    (user_id, course_code, 'pending')  # gradeObtained can be updated later
+                )
+            
+        elif role == 'admin':
+            # Handle admin registration if needed
+            pass
+
+        mysql.connection.commit()
+        cursor.close()
+        
+        # Clear session
+        session.clear()
+        flash('Registration successful! Please login.', 'success')
+        return redirect('/login')
+        
+    except Exception as e:
+        mysql.connection.rollback()
+        flash(f'Registration error: {str(e)}', 'error')
+        print(f"Registration Error: {e}")
+        return redirect('/register/step2')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """Login route"""
+    if request.method == 'POST':
+        try:
+            identifier = request.form.get('identifier', '').strip()
+            password = request.form.get('password', '').strip()
+            
+            if not identifier or not password:
+                flash('Email/Username and password are required', 'error')
+                return render_template('login.html')
+            
+            cursor = mysql.connection.cursor()
+            cursor.execute(
+                "SELECT userID, fullName, role FROM user WHERE (userName = %s OR email = %s) AND password = %s",
+                (identifier, identifier, password)
+            )
+            user = cursor.fetchone()
+            
+            if user:
+                session.permanent = True
+                session['userID'] = user[0]
+                session['fullName'] = user[1]
+                session['role'] = user[2]
+                
+                # Redirect based on role
+                if user[2] == 'student':
+                    flash(f'Welcome, {user[1]}!', 'success')
+                    return redirect('/student-dashboard')
+                elif user[2] == 'tutor':
+                    # Check tutor verification status
+                    cursor.execute(
+                        "SELECT verificationStatus, averageRating FROM tutor WHERE tutorID = %s",
+                        (user[0],)
+                    )
+                    tutor_info = cursor.fetchone()
+                    cursor.close()
+                    
+                    if tutor_info:
+                        tutor_status = tutor_info[0]
+                        average_rating = tutor_info[1]
+                        
+                        # Store verification status in session
+                        session['tutor_verification_status'] = tutor_status
+                        session['tutor_rating'] = float(average_rating) if average_rating else 0.0
+                        
+                        if tutor_status == 'approved':
+                            flash(f'Welcome, {user[1]}! Your tutor account is fully verified.', 'success')
+                            return redirect('/tutor-dashboard')
+                        elif tutor_status == 'pending':
+                            flash('Welcome! Please complete your profile verification to start tutoring and earn badges.', 'warning')
+                            return redirect('/tutor-dashboard')
+                        elif tutor_status == 'rejected':
+                            flash('Your tutor application has been rejected. Please contact support for more information.', 'error')
+                            return redirect('/tutor-dashboard')
+                        else:
+                            flash('Welcome! Please complete your profile setup.', 'warning')
+                            return redirect('/tutor-dashboard')
+                    else:
+                        flash('Tutor account not properly configured. Please contact support.', 'error')
+                        return redirect('/login')
+                elif user[2] == 'admin':
+                    flash(f'Welcome, {user[1]}!', 'success')
+                    return redirect('/admin')
+            else:
+                flash('Invalid username/email or password', 'error')
+                return render_template('login.html')
+        except Exception as e:
+            flash(f'Login error: {str(e)}', 'error')
+            return render_template('login.html')
+    
+    return render_template('login.html')
+
+@app.route('/tutor-profile', methods=['GET', 'POST'])
+def tutor_profile():
+    """Tutor profile management - view and edit details, upload docs"""
+    if 'userID' not in session or session.get('role') != 'tutor':
+        flash('Please login to access your profile', 'error')
+        return redirect('/login')
+
+    try:
+        cursor = mysql.connection.cursor()
+
+        if request.method == 'POST':
+            action = request.form.get('action', 'update_info')
+
+            if action == 'update_info':
+                full_name = request.form.get('fullName', '').strip()
+                username = request.form.get('username', '').strip()
+                password = request.form.get('password', '').strip()
+                bio = request.form.get('bio', '').strip()
+
+                if not full_name or not username:
+                    flash('Name and username are required', 'error')
+                else:
+                    # Check if new username already exists (excluding current user)
+                    cursor.execute(
+                        "SELECT userID FROM user WHERE userName = %s AND userID != %s",
+                        (username, session['userID'])
+                    )
+                    if cursor.fetchone():
+                        flash('Username already taken', 'error')
+                    else:
+                        # Update user info
+                        if password:
+                            cursor.execute(
+                                "UPDATE user SET fullName = %s, userName = %s, password = %s WHERE userID = %s",
+                                (full_name, username, password, session['userID'])
+                            )
+                            session['fullName'] = full_name
+                        else:
+                            cursor.execute(
+                                "UPDATE user SET fullName = %s, userName = %s WHERE userID = %s",
+                                (full_name, username, session['userID'])
+                            )
+                            session['fullName'] = full_name
+
+                        # Update tutor bio
+                        cursor.execute(
+                            "UPDATE tutor SET bio = %s WHERE tutorID = %s",
+                            (bio, session['userID'])
+                        )
+
+                        mysql.connection.commit()
+                        flash('Profile updated successfully', 'success')
+                        return redirect('/tutor-profile')
+
+            elif action == 'upload_profile_pic':
+                profile_pic = request.files.get('profilePic')
+                if not profile_pic or profile_pic.filename == '':
+                    flash('Please choose an image to upload', 'error')
+                elif profile_pic.filename.rsplit('.', 1)[1].lower() not in {'jpg', 'jpeg', 'png'}:
+                    flash('Only JPG, JPEG and PNG images are allowed', 'error')
+                else:
+                    filename = secure_filename(f"profile_{session['userID']}_{profile_pic.filename}")
+                    upload_folder = os.path.join(app.root_path, 'static', 'uploads', 'profile_pics')
+                    os.makedirs(upload_folder, exist_ok=True)
+
+                    save_path = os.path.join(upload_folder, filename)
+                    base, ext = os.path.splitext(filename)
+                    counter = 1
+                    while os.path.exists(save_path):
+                        filename = f"{base}_{counter}{ext}"
+                        save_path = os.path.join(upload_folder, filename)
+                        counter += 1
+
+                    profile_pic.save(save_path)
+                    relative_path = f"uploads/profile_pics/{filename}"
+
+                    cursor.execute(
+                        "UPDATE user SET profilePicture = %s WHERE userID = %s",
+                        (relative_path, session['userID'])
+                    )
+                    mysql.connection.commit()
+                    flash('Profile picture updated successfully', 'success')
+                    return redirect('/tutor-profile')
+
+            elif action == 'upload_doc':
+                document = request.files.get('document')
+                if not document or document.filename == '':
+                    flash('Please choose a document to upload', 'error')
+                elif not allowed_file(document.filename):
+                    flash('Only PDF, JPG, JPEG and PNG files are allowed', 'error')
+                else:
+                    filename = secure_filename(document.filename)
+                    upload_folder = os.path.join(app.root_path, 'static', 'uploads')
+                    os.makedirs(upload_folder, exist_ok=True)
+
+                    save_path = os.path.join(upload_folder, filename)
+                    base, ext = os.path.splitext(filename)
+                    counter = 1
+                    while os.path.exists(save_path):
+                        filename = f"{base}_{counter}{ext}"
+                        save_path = os.path.join(upload_folder, filename)
+                        counter += 1
+
+                    document.save(save_path)
+                    relative_path = f"uploads/{filename}"
+
+                    cursor.execute(
+                        "INSERT INTO verificationdocument (tutorID, filePath, approvalStatus) VALUES (%s, %s, 'pending')",
+                        (session['userID'], relative_path)
+                    )
+                    mysql.connection.commit()
+                    flash('Document uploaded successfully', 'success')
+                    return redirect('/tutor-profile')
+
+        # Get tutor info
+        cursor.execute(
+            "SELECT fullName, userName, email, profilePicture FROM user WHERE userID = %s",
+            (session['userID'],)
+        )
+        user_info = cursor.fetchone()
+
+        # Get tutor verification status and bio
+        cursor.execute(
+            "SELECT verificationStatus, averageRating, IFNULL(bio,'') FROM tutor WHERE tutorID = %s",
+            (session['userID'],)
+        )
+        tutor_info = cursor.fetchone()
+
+        # Get uploaded documents
+        cursor.execute(
+            "SELECT documentID, filePath, approvalStatus, uploadDate FROM verificationdocument WHERE tutorID = %s ORDER BY uploadDate DESC",
+            (session['userID'],)
+        )
+        documents = cursor.fetchall()
+
+        # Get courses
+        cursor.execute(
+            "SELECT tc.courseCode, c.courseName FROM tutorcourse tc JOIN course c ON tc.courseCode = c.courseCode WHERE tc.tutorID = %s",
+            (session['userID'],)
+        )
+        courses = cursor.fetchall()
+
+        cursor.close()
+
+        return render_template('tutor_profile.html',
+                             fullName=user_info[0] if user_info else '',
+                             username=user_info[1] if user_info else '',
+                             email=user_info[2] if user_info else '',
+                             profilePicture=user_info[3] if user_info else '',
+                             verificationStatus=tutor_info[0] if tutor_info else 'pending',
+                             averageRating=float(tutor_info[1]) if tutor_info and tutor_info[1] else 0.0,
+                             bio=tutor_info[2] if tutor_info and len(tutor_info) > 2 else '',
+                             documents=[{'documentID': d[0], 'filePath': d[1], 'approvalStatus': d[2], 'uploadDate': d[3]} for d in documents],
+                             courses=[{'courseCode': c[0], 'courseName': c[1]} for c in courses])
+
+    except Exception as e:
+        flash(f'Error loading profile: {str(e)}', 'error')
+        cursor.close()
+        return redirect('/tutor-dashboard')
+
+@app.route('/tutor-dashboard')
+def tutor_dashboard():
+    """Tutor dashboard route with real data and verification status"""
+    if 'userID' not in session or session.get('role') != 'tutor':
+        flash('Please login to access the tutor dashboard', 'error')
+        return redirect('/login')
+    
+    try:
+        cursor = mysql.connection.cursor()
+        
+        # Get tutor verification status
+        cursor.execute(
+            "SELECT verificationStatus, averageRating FROM tutor WHERE tutorID = %s",
+            (session['userID'],)
+        )
+        tutor_info = cursor.fetchone()
+        verification_status = tutor_info[0] if tutor_info else 'pending'
+        average_rating = float(tutor_info[1]) if tutor_info and tutor_info[1] else 0.0
+        
+        # Check if tutor has uploaded documents
+        cursor.execute(
+            "SELECT COUNT(*) FROM verificationdocument WHERE tutorID = %s",
+            (session['userID'],)
+        )
+        doc_count = cursor.fetchone()[0]
+        
+        # Check if tutor has added courses
+        cursor.execute(
+            "SELECT COUNT(*) FROM tutorcourse WHERE tutorID = %s",
+            (session['userID'],)
+        )
+        course_count = cursor.fetchone()[0]
+        
+        # Check if tutor has earned any badges
+        cursor.execute(
+            """
+            SELECT b.badgeName, b.criteriaDescription 
+            FROM badge b 
+            JOIN tutorbadge tb ON b.badgeID = tb.badgeID 
+            WHERE tb.tutorID = %s
+            """,
+            (session['userID'],)
+        )
+        badges = cursor.fetchall()
+        
+        # Get ALL sessions for this tutor
+        cursor.execute(
+            """
+            SELECT s.sessionID, s.courseCode, s.scheduledDate, s.scheduledTime, 
+                   s.sessionType, s.status, u.fullName as studentName,
+                   s.studentID
+            FROM `session` s 
+            JOIN user u ON s.studentID = u.userID 
+            WHERE s.tutorID = %s 
+            ORDER BY 
+                CASE s.status 
+                    WHEN 'pending' THEN 1 
+                    WHEN 'confirmed' THEN 2 
+                    WHEN 'completed' THEN 3 
+                    WHEN 'cancelled' THEN 4 
+                    WHEN 'declined' THEN 5
+                END,
+                s.scheduledDate ASC, s.scheduledTime ASC
+            """,
+            (session['userID'],)
+        )
+        all_sessions = cursor.fetchall()
+        
+        # Separate sessions by status (using correct database status values)
+        pending_sessions = []
+        confirmed_sessions = []
+        completed_sessions = []
+        cancelled_sessions = []
+        declined_sessions = []
+        
+        for sess in all_sessions:
+            session_data = {
+                'sessionID': sess[0],
+                'courseCode': sess[1],
+                'scheduledDate': sess[2].strftime('%Y-%m-%d') if sess[2] else 'N/A',
+                'scheduledTime': sess[3].strftime('%H:%M') if sess[3] else 'N/A',
+                'sessionType': sess[4],
+                'status': sess[5],
+                'studentName': sess[6],
+                'studentID': sess[7]
+            }
+            
+            if sess[5] == 'pending':
+                pending_sessions.append(session_data)
+            elif sess[5] == 'confirmed':
+                confirmed_sessions.append(session_data)
+            elif sess[5] == 'completed':
+                completed_sessions.append(session_data)
+            elif sess[5] == 'cancelled':
+                cancelled_sessions.append(session_data)
+            elif sess[5] == 'declined':
+                declined_sessions.append(session_data)
+        
+        # Calculate total earnings (only for completed sessions)
+        total_earnings = len(completed_sessions) * 50  # Assuming $50 per session
+        
+        # Get upcoming confirmed sessions (future dates)
+        cursor.execute(
+            """
+            SELECT s.sessionID, s.courseCode, s.scheduledDate, s.scheduledTime, 
+                   s.sessionType, s.status, u.fullName as studentName
+            FROM `session` s 
+            JOIN user u ON s.studentID = u.userID 
+            WHERE s.tutorID = %s AND s.status = 'confirmed' 
+            AND s.scheduledDate >= CURDATE() 
+            ORDER BY s.scheduledDate ASC, s.scheduledTime ASC
+            """,
+            (session['userID'],)
+        )
+        upcoming_sessions_raw = cursor.fetchall()
+        upcoming_sessions = []
+        for sess in upcoming_sessions_raw:
+            upcoming_sessions.append({
+                'sessionID': sess[0],
+                'courseCode': sess[1],
+                'scheduledDate': sess[2].strftime('%Y-%m-%d') if sess[2] else 'N/A',
+                'scheduledTime': sess[3].strftime('%H:%M') if sess[3] else 'N/A',
+                'sessionType': sess[4],
+                'status': sess[5],
+                'studentName': sess[6]
+            })
+        
+        cursor.close()
+        
+        # Format badges
+        badges_list = [{'name': b[0], 'description': b[1]} for b in badges]
+        
+        return render_template('tutor_dashboard.html', 
+                             fullName=session.get('fullName'),
+                             verification_status=verification_status,
+                             average_rating=average_rating,
+                             has_uploaded_docs=doc_count > 0,
+                             has_added_courses=course_count > 0,
+                             badges=badges_list,
+                             total_earnings=total_earnings,
+                             pending_count=len(pending_sessions),
+                             upcoming_count=len(upcoming_sessions),
+                             completed_count=len(completed_sessions),
+                             cancelled_count=len(cancelled_sessions),
+                             pending_sessions=pending_sessions,
+                             confirmed_sessions=confirmed_sessions,
+                             completed_sessions=completed_sessions,
+                             cancelled_sessions=cancelled_sessions,
+                             upcoming_sessions=upcoming_sessions)
+                             
+    except Exception as e:
+        print(f"Error loading tutor dashboard: {e}")
+        flash('Error loading dashboard data', 'error')
+        return render_template('tutor_dashboard.html', 
+                             fullName=session.get('fullName'),
+                             verification_status='pending',
+                             average_rating=0.0,
+                             has_uploaded_docs=False,
+                             has_added_courses=False,
+                             badges=[],
+                             total_earnings=0,
+                             pending_count=0,
+                             upcoming_count=0,
+                             completed_count=0,
+                             cancelled_count=0,
+                             pending_sessions=[],
+                             confirmed_sessions=[],
+                             completed_sessions=[],
+                             cancelled_sessions=[],
+                             upcoming_sessions=[])
+
+@app.route('/student-dashboard')
+def student_dashboard():
+    """Student dashboard route - shows student sessions and available tutors"""
+    if 'userID' not in session or session.get('role') != 'student':
+        flash('Please login to access the student dashboard', 'error')
+        return redirect('/login')
+
+    try:
+        cursor = mysql.connection.cursor()
+        # Student sessions
+        cursor.execute(
+            "SELECT s.sessionID, s.courseCode, s.scheduledDate, s.scheduledTime, s.status, u.fullName "
+            "FROM `session` s "
+            "JOIN user u ON s.tutorID = u.userID "
+            "WHERE s.studentID = %s "
+            "ORDER BY s.scheduledDate DESC, s.scheduledTime DESC",
+            (session['userID'],)
+        )
+        sessions_raw = cursor.fetchall()
+
+        sessions = [
+            {
+                'sessionID': row[0],
+                'courseCode': row[1],
+                'scheduledDate': row[2],
+                'scheduledTime': row[3],
+                'status': row[4],
+                'tutorName': row[5]
+            }
+            for row in sessions_raw
+        ]
+
+        # Fetch approved tutors and their courses
+        cursor.execute(
+            "SELECT u.userID, u.fullName, u.profilePicture, IFNULL(t.averageRating,0), t.verificationStatus, IFNULL(t.bio,'') "
+            "FROM user u JOIN tutor t ON u.userID = t.tutorID "
+            "ORDER BY u.fullName"
+        )
+        tutors_raw = cursor.fetchall()
+
+        tutors = []
+        for row in tutors_raw:
+            tutor_id = row[0]
+            cursor.execute(
+                "SELECT c.courseCode, c.courseName FROM tutorcourse tc JOIN course c ON tc.courseCode = c.courseCode WHERE tc.tutorID = %s",
+                (tutor_id,)
+            )
+            courses = cursor.fetchall()
+            tutors.append({
+                'tutorID': tutor_id,
+                'fullName': row[1],
+                'profilePicture': row[2],
+                'averageRating': float(row[3]) if row[3] else 0.0,
+                'verificationStatus': row[4] if len(row) > 4 else 'approved',
+                'bio': row[5] if len(row) > 5 else '',
+                'courses': [{'courseCode': c[0], 'courseName': c[1]} for c in courses]
+            })
+
+        cursor.close()
+    except Exception as e:
+        print(f"Error loading student dashboard: {e}")
+        sessions = []
+        tutors = []
+
+    return render_template('student_dashboard.html', fullName=session.get('fullName'), sessions=sessions, tutors=tutors)
+
+
+@app.route('/tutor/<int:tutorID>')
+def view_tutor(tutorID):
+    """Allow students to view a tutor's public profile and courses"""
+    if 'userID' not in session or session.get('role') != 'student':
+        flash('Please login as a student to view tutor profiles.', 'error')
+        return redirect('/login')
+
+    try:
+        cursor = mysql.connection.cursor()
+        cursor.execute(
+            "SELECT u.userID, u.fullName, u.userName, u.profilePicture, u.email, IFNULL(t.averageRating,0), t.verificationStatus, IFNULL(t.bio,'') "
+            "FROM user u JOIN tutor t ON u.userID = t.tutorID WHERE u.userID = %s",
+            (tutorID,)
+        )
+        row = cursor.fetchone()
+        if not row:
+            flash('Tutor not found', 'error')
+            return redirect('/student-dashboard')
+
+        cursor.execute(
+            "SELECT c.courseCode, c.courseName FROM tutorcourse tc JOIN course c ON tc.courseCode = c.courseCode WHERE tc.tutorID = %s",
+            (tutorID,)
+        )
+        courses = cursor.fetchall()
+        cursor.close()
+
+        tutor = {
+            'tutorID': row[0],
+            'fullName': row[1],
+            'userName': row[2],
+            'profilePicture': row[3],
+            'email': row[4],
+            'averageRating': float(row[5]) if row[5] else 0.0,
+            'verificationStatus': row[6],
+            'bio': row[7] if len(row) > 7 else ''
+        }
+
+        return render_template('tutor_view.html', fullName=session.get('fullName'), tutor=tutor, courses=[{'courseCode': c[0], 'courseName': c[1]} for c in courses])
+    except Exception as e:
+        flash(f'Error loading tutor profile: {str(e)}', 'error')
+        print(f"Error in view_tutor: {e}")
+        return redirect('/student-dashboard')
+
+@app.route('/logout')
+def logout():
+    """Logout route"""
+    session.clear()
+    flash('You have been logged out successfully', 'success')
+    return redirect('/login')
+
+# ============ Tutor Management Routes ============
+
+@app.route('/upload-docs', methods=['GET', 'POST'])
+def upload_docs():
+    """Allow logged-in tutors to upload verification documents"""
+    if 'userID' not in session or session.get('role') != 'tutor':
+        flash('Only logged-in tutors can upload documents.', 'error')
+        return redirect('/login')
+
+    if request.method == 'POST':
+        document = request.files.get('document')
+        if not document or document.filename == '':
+            flash('Please choose a document to upload.', 'error')
+            return render_template('upload_docs.html')
+
+        if not allowed_file(document.filename):
+            flash('Only PDF, JPG, JPEG and PNG files are allowed.', 'error')
+            return render_template('upload_docs.html')
+
+        filename = secure_filename(document.filename)
+        upload_folder = os.path.join(app.root_path, 'static', 'uploads')
+        os.makedirs(upload_folder, exist_ok=True)
+
+        save_path = os.path.join(upload_folder, filename)
+        base, ext = os.path.splitext(filename)
+        counter = 1
+        while os.path.exists(save_path):
+            filename = f"{base}_{counter}{ext}"
+            save_path = os.path.join(upload_folder, filename)
+            counter += 1
+
+        document.save(save_path)
+        relative_path = f"uploads/{filename}"
+
+        try:
+            cursor = mysql.connection.cursor()
+            cursor.execute(
+                "INSERT INTO verificationdocument (tutorID, filePath, approvalStatus) VALUES (%s, %s, 'pending')",
+                (session['userID'], relative_path)
+            )
+            mysql.connection.commit()
+            cursor.close()
+            flash('Document uploaded successfully and submitted for verification.', 'success')
+            return redirect('/tutor-dashboard')
+        except Exception as e:
+            flash(f'Upload failed: {str(e)}', 'error')
+            return render_template('upload_docs.html')
+
+    return render_template('upload_docs.html')
+
+@app.route('/manage-courses', methods=['GET', 'POST'])
+def manage_courses():
+    """Allow tutors to add/manage courses they can tutor"""
+    if 'userID' not in session or session.get('role') != 'tutor':
+        flash('Please login as a tutor to manage courses', 'error')
+        return redirect('/login')
+    
+    try:
+        cursor = mysql.connection.cursor()
+        
+        # Get tutor's current courses
+        cursor.execute(
+            "SELECT tc.courseCode, c.courseName, tc.gradeObtained "
+            "FROM tutorcourse tc "
+            "JOIN course c ON tc.courseCode = c.courseCode "
+            "WHERE tc.tutorID = %s",
+            (session['userID'],)
+        )
+        current_courses = cursor.fetchall()
+        
+        # Get available courses (all courses from database)
+        cursor.execute(
+            "SELECT courseCode, courseName FROM course ORDER BY courseCode"
+        )
+        all_courses = cursor.fetchall()
+        
+        cursor.close()
+        
+        return render_template('manage_courses.html', 
+                             current_courses=current_courses,
+                             all_courses=all_courses)
+    except Exception as e:
+        flash(f'Error loading courses: {str(e)}', 'error')
+        return redirect('/tutor-dashboard')
+
+@app.route('/search', methods=['GET'])
+def search():
+    """Search for tutors by course code - shows all tutors regardless of verification status"""
+    if 'userID' not in session or session.get('role') != 'student':
+        flash('Please login as a student to search for tutors.', 'error')
+        return redirect('/login')
+        
+    course_code = request.args.get('courseCode', '').strip().upper()  # Convert to uppercase for consistency
+    if not course_code:
+        flash('Please enter a course code to search.', 'error')
+        return redirect('/student-dashboard')
+
+    try:
+        cursor = mysql.connection.cursor()
+        
+        # Get all tutors for the searched course - REMOVED verification status filter
+        cursor.execute("""
+            SELECT DISTINCT 
+                u.userID, 
+                u.fullName, 
+                u.profilePicture, 
+                t.verificationStatus,
+                COALESCE(t.averageRating, 0) as averageRating,
+                COALESCE(t.bio, '') as bio,
+                tc.courseCode
+            FROM tutorcourse tc 
+            JOIN tutor t ON tc.tutorID = t.tutorID 
+            JOIN user u ON tc.tutorID = u.userID 
+            WHERE UPPER(tc.courseCode) = %s 
+            ORDER BY 
+                CASE t.verificationStatus 
+                    WHEN 'approved' THEN 1 
+                    WHEN 'pending' THEN 2 
+                    ELSE 3 
+                END,
+                t.averageRating DESC, 
+                u.fullName ASC
+        """, (course_code,))
+        
+        tutors_raw = cursor.fetchall()
+        
+        # Get additional courses for each tutor
+        tutors = []
+        for row in tutors_raw:
+            tutor_id = row[0]
+            
+            # Get all courses this tutor teaches
+            cursor.execute("""
+                SELECT c.courseCode 
+                FROM tutorcourse tc 
+                JOIN course c ON tc.courseCode = c.courseCode 
+                WHERE tc.tutorID = %s
+            """, (tutor_id,))
+            
+            all_courses = cursor.fetchall()
+            additional_courses = [c[0] for c in all_courses if c[0] != course_code]
+            
+            tutors.append({
+                'tutorID': tutor_id,
+                'fullName': row[1],
+                'profilePicture': row[2],
+                'verificationStatus': row[3],
+                'averageRating': float(row[4]) if row[4] else 0.0,
+                'bio': row[5] if row[5] else '',
+                'courseCode': row[6],
+                'additional_courses': additional_courses[:2]  # Show up to 2 additional courses
+            })
+        
+        cursor.close()
+        
+        # Also suggest similar courses if no tutors found
+        similar_courses = []
+        if not tutors:
+            cursor = mysql.connection.cursor()
+            cursor.execute("""
+                SELECT DISTINCT courseCode, courseName 
+                FROM course 
+                WHERE courseCode LIKE %s OR courseName LIKE %s
+                LIMIT 5
+            """, (f'%{course_code}%', f'%{course_code}%'))
+            similar_courses = cursor.fetchall()
+            cursor.close()
+        
+        # Count tutors by verification status for display
+        approved_count = len([t for t in tutors if t['verificationStatus'] == 'approved'])
+        pending_count = len([t for t in tutors if t['verificationStatus'] == 'pending'])
+        rejected_count = len([t for t in tutors if t['verificationStatus'] == 'rejected'])
+        
+        return render_template('search_results.html', 
+                             fullName=session.get('fullName'),
+                             tutors=tutors, 
+                             course_code=course_code,
+                             similar_courses=similar_courses,
+                             approved_count=approved_count,
+                             pending_count=pending_count,
+                             rejected_count=rejected_count)
+                             
+    except Exception as e:
+        print(f"Search error: {e}")
+        flash(f'Search error: {str(e)}', 'error')
+        return redirect('/student-dashboard')
+
+@app.route('/admin')
+def admin_dashboard():
+    """Admin dashboard with all management features"""
+    if 'userID' not in session or session.get('role') != 'admin':
+        flash('Admin access required.', 'error')
+        return redirect('/login')
+
+    try:
+        cursor = mysql.connection.cursor()
+        
+        # Get total counts
+        cursor.execute("SELECT COUNT(*) FROM user")
+        total_users = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COUNT(*) FROM tutor")
+        total_tutors = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COUNT(*) FROM `session`")
+        total_sessions = cursor.fetchone()[0]
+        
+        # Get pending verifications count (tutors pending + docs pending)
+        cursor.execute("SELECT COUNT(*) FROM tutor WHERE verificationStatus = 'pending'")
+        pending_tutors_count = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COUNT(*) FROM verificationdocument WHERE approvalStatus = 'pending'")
+        pending_docs_count = cursor.fetchone()[0]
+        pending_verifications = pending_tutors_count + pending_docs_count
+        
+        # Get pending tutor verifications (tutors with pending status)
+        cursor.execute("""
+            SELECT t.tutorID, u.fullName, t.verificationStatus, 
+                   COALESCE(v.uploadDate, 'N/A') as uploadDate,
+                   (SELECT COUNT(*) FROM verificationdocument WHERE tutorID = t.tutorID) as doc_count
+            FROM tutor t
+            JOIN user u ON t.tutorID = u.userID
+            LEFT JOIN verificationdocument v ON t.tutorID = v.tutorID AND v.approvalStatus = 'pending'
+            WHERE t.verificationStatus = 'pending'
+            GROUP BY t.tutorID
+            ORDER BY v.uploadDate DESC
+        """)
+        pending_tutors_raw = cursor.fetchall()
+        
+        pending_tutors = []
+        for row in pending_tutors_raw:
+            pending_tutors.append({
+                'tutorID': row[0],
+                'fullName': row[1],
+                'verificationStatus': row[2],
+                'uploadDate': row[3].strftime('%Y-%m-%d') if hasattr(row[3], 'strftime') else str(row[3]),
+                'doc_count': row[4]
+            })
+        
+        # Get pending documents
+        cursor.execute("""
+            SELECT v.documentID, v.tutorID, v.filePath, v.documentType, v.uploadDate, 
+                   u.fullName, t.verificationStatus
+            FROM verificationdocument v
+            JOIN tutor t ON v.tutorID = t.tutorID
+            JOIN user u ON v.tutorID = u.userID
+            WHERE v.approvalStatus = 'pending'
+            ORDER BY v.uploadDate DESC
+        """)
+        pending_docs_raw = cursor.fetchall()
+        
+        pending_docs = []
+        for row in pending_docs_raw:
+            pending_docs.append({
+                'documentID': row[0],
+                'tutorID': row[1],
+                'filePath': row[2],
+                'documentType': row[3] or 'Document',
+                'uploadDate': row[4].strftime('%Y-%m-%d %H:%M') if hasattr(row[4], 'strftime') else str(row[4]),
+                'fullName': row[5],
+                'verificationStatus': row[6]
+            })
+        
+        # Get all tutors with their details (removed schoolID reference)
+        cursor.execute("""
+            SELECT t.tutorID, u.fullName, u.email, t.verificationStatus, 
+                   IFNULL(t.averageRating, 0) as averageRating, 
+                   COUNT(DISTINCT tc.courseCode) as course_count,
+                   COUNT(DISTINCT s.sessionID) as session_count
+            FROM tutor t
+            JOIN user u ON t.tutorID = u.userID
+            LEFT JOIN tutorcourse tc ON t.tutorID = tc.tutorID
+            LEFT JOIN `session` s ON t.tutorID = s.tutorID
+            GROUP BY t.tutorID
+            ORDER BY u.fullName
+        """)
+        all_tutors_raw = cursor.fetchall()
+        
+        all_tutors_list = []
+        for row in all_tutors_raw:
+            all_tutors_list.append({
+                'tutorID': row[0],
+                'fullName': row[1],
+                'email': row[2],
+                'verificationStatus': row[3],
+                'averageRating': float(row[4]) if row[4] else 0.0,
+                'course_count': row[5],
+                'session_count': row[6]
+            })
+        
+        # Get all students
+        cursor.execute("""
+            SELECT s.studentID, u.fullName, u.email, p.programName,
+                   COUNT(DISTINCT s2.sessionID) as session_count
+            FROM student s
+            JOIN user u ON s.studentID = u.userID
+            LEFT JOIN program p ON s.programID = p.programID
+            LEFT JOIN `session` s2 ON s.studentID = s2.studentID
+            GROUP BY s.studentID
+            ORDER BY u.fullName
+        """)
+        all_students_raw = cursor.fetchall()
+        
+        all_students = []
+        for row in all_students_raw:
+            all_students.append({
+                'studentID': row[0],
+                'fullName': row[1],
+                'email': row[2],
+                'programName': row[3] if row[3] else 'Not assigned',
+                'session_count': row[4]
+            })
+        
+        # Get recent sessions
+        cursor.execute("""
+            SELECT s.sessionID, s.courseCode, s.scheduledDate, s.scheduledTime, s.status,
+                   u1.fullName as studentName, u2.fullName as tutorName
+            FROM `session` s
+            JOIN user u1 ON s.studentID = u1.userID
+            JOIN user u2 ON s.tutorID = u2.userID
+            ORDER BY s.scheduledDate DESC, s.scheduledTime DESC
+            LIMIT 20
+        """)
+        recent_sessions_raw = cursor.fetchall()
+        
+        recent_sessions = []
+        for row in recent_sessions_raw:
+            recent_sessions.append({
+                'sessionID': row[0],
+                'courseCode': row[1],
+                'scheduledDate': row[2].strftime('%Y-%m-%d') if hasattr(row[2], 'strftime') else str(row[2]),
+                'scheduledTime': str(row[3]) if row[3] else 'N/A',
+                'status': row[4],
+                'studentName': row[5],
+                'tutorName': row[6]
+            })
+        
+        cursor.close()
+        
+        return render_template('admin_dashboard.html', 
+                             fullName=session.get('fullName'),
+                             total_users=total_users,
+                             total_tutors=total_tutors,
+                             pending_verifications=pending_verifications,
+                             total_sessions=total_sessions,
+                             pending_tutors=pending_tutors,
+                             pending_docs=pending_docs,
+                             all_tutors_list=all_tutors_list,
+                             all_students=all_students,
+                             recent_sessions=recent_sessions)
+                             
+    except Exception as e:
+        print(f"Error loading admin dashboard: {e}")
+        flash(f'Unable to load admin dashboard: {str(e)}', 'error')
+        return redirect('/login')
+
+@app.route('/admin/approve-tutor/<int:tutorID>', methods=['POST'])
+def admin_approve_tutor(tutorID):
+    """Approve a tutor's verification"""
+    if 'userID' not in session or session.get('role') != 'admin':
+        flash('Admin access required.', 'error')
+        return redirect('/login')
+
+    try:
+        cursor = mysql.connection.cursor()
+        cursor.execute("UPDATE tutor SET verificationStatus = 'approved' WHERE tutorID = %s", (tutorID,))
+        mysql.connection.commit()
+        cursor.close()
+        flash('Tutor has been approved successfully.', 'success')
+    except Exception as e:
+        flash(f'Approval failed: {str(e)}', 'error')
+
+    return redirect('/admin')
+
+@app.route('/admin/reject-tutor/<int:tutorID>', methods=['POST'])
+def admin_reject_tutor(tutorID):
+    """Reject a tutor's verification"""
+    if 'userID' not in session or session.get('role') != 'admin':
+        flash('Admin access required.', 'error')
+        return redirect('/login')
+
+    try:
+        cursor = mysql.connection.cursor()
+        cursor.execute("UPDATE tutor SET verificationStatus = 'rejected' WHERE tutorID = %s", (tutorID,))
+        mysql.connection.commit()
+        cursor.close()
+        flash('Tutor has been rejected.', 'success')
+    except Exception as e:
+        flash(f'Rejection failed: {str(e)}', 'error')
+
+    return redirect('/admin')
+
+@app.route('/admin/approve-doc/<int:documentID>', methods=['POST'])
+def admin_approve_doc(documentID):
+    """Approve a verification document"""
+    if 'userID' not in session or session.get('role') != 'admin':
+        flash('Admin access required.', 'error')
+        return redirect('/login')
+
+    try:
+        cursor = mysql.connection.cursor()
+        
+        # Get the tutorID from the document
+        cursor.execute("SELECT tutorID FROM verificationdocument WHERE documentID = %s", (documentID,))
+        result = cursor.fetchone()
+        
+        if result:
+            tutorID = result[0]
+            # Update document status
+            cursor.execute("UPDATE verificationdocument SET approvalStatus = 'approved' WHERE documentID = %s", (documentID,))
+            
+            # Check if tutor has any approved documents
+            cursor.execute("""
+                SELECT COUNT(*) FROM verificationdocument 
+                WHERE tutorID = %s AND approvalStatus = 'approved'
+            """, (tutorID,))
+            approved_count = cursor.fetchone()[0]
+            
+            # If this is the first approved document, update tutor status to approved
+            if approved_count >= 1:
+                cursor.execute("UPDATE tutor SET verificationStatus = 'approved' WHERE tutorID = %s AND verificationStatus = 'pending'", (tutorID,))
+            
+            mysql.connection.commit()
+            flash('Document approved successfully.', 'success')
+        else:
+            flash('Document not found.', 'error')
+            
+        cursor.close()
+    except Exception as e:
+        flash(f'Approval failed: {str(e)}', 'error')
+
+    return redirect('/admin')
+
+@app.route('/admin/reject-doc/<int:documentID>', methods=['POST'])
+def admin_reject_doc(documentID):
+    """Reject a verification document"""
+    if 'userID' not in session or session.get('role') != 'admin':
+        flash('Admin access required.', 'error')
+        return redirect('/login')
+
+    try:
+        cursor = mysql.connection.cursor()
+        cursor.execute("UPDATE verificationdocument SET approvalStatus = 'rejected' WHERE documentID = %s", (documentID,))
+        mysql.connection.commit()
+        cursor.close()
+        flash('Document rejected.', 'success')
+    except Exception as e:
+        flash(f'Rejection failed: {str(e)}', 'error')
+
+    return redirect('/admin')
+
+@app.route('/admin/tutor-details/<int:tutorID>')
+def admin_tutor_details(tutorID):
+    """Get tutor details for modal view"""
+    if 'userID' not in session or session.get('role') != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    try:
+        cursor = mysql.connection.cursor()
+        
+        # Get tutor basic info
+        cursor.execute("""
+            SELECT u.fullName, u.userName, u.email, t.verificationStatus, 
+                   IFNULL(t.averageRating, 0), IFNULL(t.bio, '')
+            FROM user u
+            JOIN tutor t ON u.userID = t.tutorID
+            WHERE t.tutorID = %s
+        """, (tutorID,))
+        tutor = cursor.fetchone()
+        
+        # Get tutor courses
+        cursor.execute("""
+            SELECT c.courseCode, c.courseName
+            FROM tutorcourse tc
+            JOIN course c ON tc.courseCode = c.courseCode
+            WHERE tc.tutorID = %s
+        """, (tutorID,))
+        courses = cursor.fetchall()
+        
+        # Get tutor documents
+        cursor.execute("""
+            SELECT documentID, filePath, documentType, approvalStatus, uploadDate
+            FROM verificationdocument
+            WHERE tutorID = %s
+        """, (tutorID,))
+        documents = cursor.fetchall()
+        
+        cursor.close()
+        
+        return jsonify({
+            'fullName': tutor[0],
+            'userName': tutor[1],
+            'email': tutor[2],
+            'verificationStatus': tutor[3],
+            'averageRating': float(tutor[4]) if tutor[4] else 0.0,
+            'bio': tutor[5],
+            'courses': [{'courseCode': c[0], 'courseName': c[1]} for c in courses],
+            'documents': [{'documentID': d[0], 'filePath': d[1], 'documentType': d[2] or 'Document', 'approvalStatus': d[3]} for d in documents]
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/book-session', methods=['GET', 'POST'])
+def book_session():
+    """Create a new student booking request"""
+    if 'userID' not in session or session.get('role') != 'student':
+        flash('Please login as a student to book a session.', 'error')
+        return redirect('/login')
+
+    if request.method == 'POST':
+        tutor_id = request.form.get('tutorID')
+        course_code = request.form.get('courseCode', '').strip()
+        scheduled_date = request.form.get('scheduledDate')
+        scheduled_time = request.form.get('timeSlot')
+        session_type = request.form.get('sessionType', 'individual')
+
+        if not tutor_id or not course_code or not scheduled_date or not scheduled_time:
+            flash('Please complete all booking fields.', 'error')
+            return redirect('/book-session')
+
+        try:
+            cursor = mysql.connection.cursor()
+            cursor.execute(
+                "INSERT INTO `session` (studentID, tutorID, courseCode, sessionType, scheduledDate, scheduledTime, status) "
+                "VALUES (%s, %s, %s, %s, %s, %s, 'pending')",
+                (session['userID'], tutor_id, course_code, session_type, scheduled_date, scheduled_time)
+            )
+            mysql.connection.commit()
+            cursor.close()
+            flash('Session request submitted successfully.', 'success')
+            return redirect('/student-dashboard')
+        except Exception as e:
+            flash(f'Booking failed: {str(e)}', 'error')
+            return redirect('/book-session')
+
+    tutor_id = request.args.get('tutorID', '')
+    return render_template('book_session.html', fullName=session.get('fullName'),tutor_id=tutor_id)
+
+@app.route('/session/accept/<int:sessionID>', methods=['POST'])
+def accept_session(sessionID):
+    """Accept a pending session request"""
+    if 'userID' not in session or session.get('role') != 'tutor':
+        flash('Only tutors can accept sessions.', 'error')
+        return redirect('/login')
+    
+    try:
+        cursor = mysql.connection.cursor()
+        cursor.execute(
+            "UPDATE `session` SET status = 'confirmed' WHERE sessionID = %s AND tutorID = %s",
+            (sessionID, session['userID'])
+        )
+        mysql.connection.commit()
+        cursor.close()
+        flash('Session request accepted.', 'success')
+    except Exception as e:
+        flash(f'Error accepting session: {str(e)}', 'error')
+    
+    return redirect('/tutor-dashboard')
+
+# Replace the decline_session route with this:
+
+@app.route('/session/decline/<int:sessionID>', methods=['POST'])
+def decline_session(sessionID):
+    """Decline a pending session request"""
+    if 'userID' not in session or session.get('role') != 'tutor':
+        flash('Only tutors can decline sessions.', 'error')
+        return redirect('/login')
+    
+    try:
+        cursor = mysql.connection.cursor()
+        # Change status to 'declined' instead of 'cancelled' to match the enum values
+        cursor.execute(
+            "UPDATE `session` SET status = 'declined' WHERE sessionID = %s AND tutorID = %s AND status = 'pending'",
+            (sessionID, session['userID'])
+        )
+        mysql.connection.commit()
+        cursor.close()
+        flash('Session request declined.', 'success')
+    except Exception as e:
+        flash(f'Error declining session: {str(e)}', 'error')
+    
+    return redirect('/tutor-dashboard')
+
+
+@app.route('/upcoming-sessions')
+def upcoming_sessions():
+    """Show student's upcoming sessions (future and approved/pending)"""
+    if 'userID' not in session or session.get('role') != 'student':
+        flash('Please login to view upcoming sessions.', 'error')
+        return redirect('/login')
+
+    try:
+        cursor = mysql.connection.cursor()
+        cursor.execute(
+            "SELECT s.sessionID, s.courseCode, s.scheduledDate, s.scheduledTime, s.status, u.fullName "
+            "FROM `session` s "
+            "JOIN user u ON s.tutorID = u.userID "
+            "WHERE s.studentID = %s AND s.scheduledDate >= CURDATE() "
+            "ORDER BY s.scheduledDate ASC, s.scheduledTime ASC",
+            (session['userID'],)
+        )
+        rows = cursor.fetchall()
+        cursor.close()
+
+        sessions = [
+            {
+                'sessionID': r[0],
+                'courseCode': r[1],
+                'scheduledDate': r[2],
+                'scheduledTime': r[3],
+                'status': r[4],
+                'tutorName': r[5]
+            }
+            for r in rows
+        ]
+    except Exception as e:
+        flash(f'Error loading upcoming sessions: {str(e)}', 'error')
+        sessions = []
+
+    return render_template('upcoming_sessions.html', fullName=session.get('fullName'), sessions=sessions)
+
+
+@app.errorhandler(404)
+def page_not_found(error):
+    """Handle 404 errors by redirecting to the appropriate dashboard"""
+    flash('Page not found. Redirecting to your dashboard.', 'error')
+    return _redirect_on_error()
+
+@app.errorhandler(500)
+def internal_error(error):
+    """Handle 500 errors by redirecting to the appropriate dashboard"""
+    flash('An internal error occurred. Redirecting to your dashboard.', 'error')
+    return _redirect_on_error()
+
+# ============ Main ============
 
 if __name__ == '__main__':
     app.run(debug=True)
-
