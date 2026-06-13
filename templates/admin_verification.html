@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZitConnect - Tutor Verification</title>
+    <link rel="stylesheet" href="/static/css/admin_dashboard.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+</head>
+<body>
+    <div class="Dashboard">
+        <!-- LEFT SIDEBAR -->
+        <div class="left">
+            <div class="Header">
+                <div class="logo-circle"></div>
+                <h1>ZitConnect</h1>
+            </div>
+            <a href="/admin" class="menu-item">
+                <i class="bi bi-speedometer2 menu-icon"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="/admin/users" class="menu-item">
+                <i class="bi bi-people-fill menu-icon"></i>
+                <span>Users</span>
+            </a>
+            <a href="/admin/verification" class="menu-item active">
+                <i class="bi bi-patch-check-fill menu-icon"></i>
+                <span>Verification</span>
+            </a>
+            <a href="/admin/courses" class="menu-item">
+                <i class="bi bi-book-fill menu-icon"></i>
+                <span>Course Management</span>
+            </a>
+            <a href="/admin/profile" class="menu-item">
+                <i class="bi bi-person-circle menu-icon"></i>
+                <span>Profile</span>
+            </a>
+            <a href="/logout" class="menu-item logout-item">
+                <i class="bi bi-box-arrow-right menu-icon"></i>
+                <span>Logout</span>
+            </a>
+        </div>
+
+        <!-- RIGHT SIDE -->
+        <div class="right">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <div class="Welcome_part">
+                <h2>Tutor Verification</h2>
+            </div>
+
+            <div class="sub-tabs">
+                <button class="sub-tab active" onclick="showVerificationTab('pending-docs')">Pending Documents</button>
+                <button class="sub-tab" onclick="showVerificationTab('pending-tutors')">Pending Tutors</button>
+            </div>
+
+            <!-- Pending Documents -->
+            <div id="pending-docs-subsection" class="sub-section active">
+                <div class="bottom">
+                    <div class="bottom-header">
+                        <h3><i class="bi bi-file-earmark-text"></i> Pending Documents</h3>
+                    </div>
+                    <table class="sessions-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Name</th>
+                                <th>Document</th>
+                                <th>Upload Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if pending_docs and pending_docs|length > 0 %}
+                                {% for doc in pending_docs %}
+                                <tr>
+                                    <td>{{ loop.index }}</td>
+                                    <td><i class="bi bi-person-circle"></i> {{ doc.fullName }}</td>
+                                    <td><a href="/static/{{ doc.filePath }}" target="_blank" style="color: #2c5f8a;"><i class="bi bi-file-earmark-pdf"></i> View Document</a></td>
+                                    <td><i class="bi bi-calendar3"></i> {{ doc.uploadDate }}</td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <form action="/admin/approve-doc/{{ doc.documentID }}" method="post" style="display: inline-block;">
+                                                <button type="submit" class="accept-btn"><i class="bi bi-check-lg"></i> Approve</button>
+                                            </form>
+                                            <form action="/admin/reject-doc/{{ doc.documentID }}" method="post" style="display: inline-block;">
+                                                <button type="submit" class="decline-btn"><i class="bi bi-x-lg"></i> Reject</button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="5" style="text-align: center;">No pending documents found.</td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Pending Tutors -->
+            <div id="pending-tutors-subsection" class="sub-section">
+                <div class="bottom">
+                    <div class="bottom-header">
+                        <h3><i class="bi bi-people"></i> Pending Tutors</h3>
+                    </div>
+                    <table class="sessions-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Name</th>
+                                <th>Documents</th>
+                                <th>Registered</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if pending_tutors and pending_tutors|length > 0 %}
+                                {% for tutor in pending_tutors %}
+                                <tr>
+                                    <td>{{ loop.index }}</td>
+                                    <td><i class="bi bi-person-circle"></i> {{ tutor.fullName }}</td>
+                                    <td><i class="bi bi-file-earmark"></i> {{ tutor.doc_count|default(0) }} doc(s)</td>
+                                    <td><i class="bi bi-calendar3"></i> {{ tutor.uploadDate }}</td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <form action="/admin/approve-tutor/{{ tutor.tutorID }}" method="post" style="display: inline-block;">
+                                                <button type="submit" class="accept-btn"><i class="bi bi-check-lg"></i> Approve</button>
+                                            </form>
+                                            <form action="/admin/reject-tutor/{{ tutor.tutorID }}" method="post" style="display: inline-block;">
+                                                <button type="submit" class="decline-btn"><i class="bi bi-x-lg"></i> Reject</button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="5" style="text-align: center;">No pending tutor verifications found.</td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showVerificationTab(tabName) {
+            document.getElementById('pending-docs-subsection').classList.remove('active');
+            document.getElementById('pending-tutors-subsection').classList.remove('active');
+            document.getElementById(tabName + '-subsection').classList.add('active');
+            
+            document.querySelectorAll('.sub-tab').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
+    </script>
+</body>
+</html>

@@ -544,6 +544,9 @@ def tutor_dashboard():
         )
         badges = cursor.fetchall()
         
+        # DEBUG: Print the tutor ID to console
+        print(f"Fetching sessions for tutor ID: {session['userID']}")
+        
         # Get ALL sessions for this tutor
         cursor.execute(
             """
@@ -560,6 +563,7 @@ def tutor_dashboard():
                     WHEN 'completed' THEN 3 
                     WHEN 'cancelled' THEN 4 
                     WHEN 'declined' THEN 5
+                    ELSE 6
                 END,
                 s.scheduledDate ASC, s.scheduledTime ASC
             """,
@@ -567,7 +571,10 @@ def tutor_dashboard():
         )
         all_sessions = cursor.fetchall()
         
-        # Separate sessions by status (using correct database status values)
+        # DEBUG: Print how many sessions found
+        print(f"Found {len(all_sessions)} sessions for tutor {session['userID']}")
+        
+        # Separate sessions by status
         pending_sessions = []
         confirmed_sessions = []
         completed_sessions = []
@@ -575,17 +582,40 @@ def tutor_dashboard():
         declined_sessions = []
         
         for sess in all_sessions:
+            # Handle date formatting safely
+            scheduled_date = sess[2]
+            if scheduled_date:
+                if hasattr(scheduled_date, 'strftime'):
+                    formatted_date = scheduled_date.strftime('%Y-%m-%d')
+                else:
+                    formatted_date = str(scheduled_date)
+            else:
+                formatted_date = 'N/A'
+            
+            # Handle time formatting safely
+            scheduled_time = sess[3]
+            if scheduled_time:
+                if hasattr(scheduled_time, 'strftime'):
+                    formatted_time = scheduled_time.strftime('%H:%M')
+                else:
+                    formatted_time = str(scheduled_time)
+            else:
+                formatted_time = 'N/A'
+            
             session_data = {
                 'sessionID': sess[0],
                 'courseCode': sess[1],
-                'scheduledDate': sess[2].strftime('%Y-%m-%d') if sess[2] else 'N/A',
-                'scheduledTime': sess[3].strftime('%H:%M') if sess[3] else 'N/A',
-                'sessionType': sess[4],
-                'status': sess[5],
-                'studentName': sess[6],
+                'scheduledDate': formatted_date,
+                'scheduledTime': formatted_time,
+                'sessionType': sess[4] if sess[4] else 'individual',
+                'status': sess[5] if sess[5] else 'pending',
+                'studentName': sess[6] if sess[6] else 'Unknown Student',
                 'studentID': sess[7]
             }
             
+            print(f"Session {sess[0]}: status={sess[5]}, date={formatted_date}")
+            
+            # Categorize by status
             if sess[5] == 'pending':
                 pending_sessions.append(session_data)
             elif sess[5] == 'confirmed':
@@ -601,6 +631,9 @@ def tutor_dashboard():
         total_earnings = len(completed_sessions) * 50  # Assuming $50 per session
         
         # Get upcoming confirmed sessions (future dates)
+        from datetime import date
+        today = date.today()
+        
         cursor.execute(
             """
             SELECT s.sessionID, s.courseCode, s.scheduledDate, s.scheduledTime, 
@@ -616,20 +649,41 @@ def tutor_dashboard():
         upcoming_sessions_raw = cursor.fetchall()
         upcoming_sessions = []
         for sess in upcoming_sessions_raw:
+            # Handle date formatting
+            scheduled_date = sess[2]
+            if scheduled_date:
+                if hasattr(scheduled_date, 'strftime'):
+                    formatted_date = scheduled_date.strftime('%Y-%m-%d')
+                else:
+                    formatted_date = str(scheduled_date)
+            else:
+                formatted_date = 'N/A'
+            
+            scheduled_time = sess[3]
+            if scheduled_time:
+                if hasattr(scheduled_time, 'strftime'):
+                    formatted_time = scheduled_time.strftime('%H:%M')
+                else:
+                    formatted_time = str(scheduled_time)
+            else:
+                formatted_time = 'N/A'
+            
             upcoming_sessions.append({
                 'sessionID': sess[0],
                 'courseCode': sess[1],
-                'scheduledDate': sess[2].strftime('%Y-%m-%d') if sess[2] else 'N/A',
-                'scheduledTime': sess[3].strftime('%H:%M') if sess[3] else 'N/A',
-                'sessionType': sess[4],
-                'status': sess[5],
-                'studentName': sess[6]
+                'scheduledDate': formatted_date,
+                'scheduledTime': formatted_time,
+                'sessionType': sess[4] if sess[4] else 'individual',
+                'status': sess[5] if sess[5] else 'confirmed',
+                'studentName': sess[6] if sess[6] else 'Unknown Student'
             })
         
         cursor.close()
         
         # Format badges
         badges_list = [{'name': b[0], 'description': b[1]} for b in badges]
+        
+        print(f"Final counts - Pending: {len(pending_sessions)}, Confirmed: {len(confirmed_sessions)}, Completed: {len(completed_sessions)}")
         
         return render_template('tutor_dashboard.html', 
                              fullName=session.get('fullName'),
@@ -647,10 +701,13 @@ def tutor_dashboard():
                              confirmed_sessions=confirmed_sessions,
                              completed_sessions=completed_sessions,
                              cancelled_sessions=cancelled_sessions,
+                             declined_sessions=declined_sessions,
                              upcoming_sessions=upcoming_sessions)
                              
     except Exception as e:
         print(f"Error loading tutor dashboard: {e}")
+        import traceback
+        traceback.print_exc()
         flash('Error loading dashboard data', 'error')
         return render_template('tutor_dashboard.html', 
                              fullName=session.get('fullName'),
@@ -668,6 +725,7 @@ def tutor_dashboard():
                              confirmed_sessions=[],
                              completed_sessions=[],
                              cancelled_sessions=[],
+                             declined_sessions=[],
                              upcoming_sessions=[])
 
 @app.route('/student-dashboard')
@@ -976,7 +1034,7 @@ def search():
 
 @app.route('/admin')
 def admin_dashboard():
-    """Admin dashboard with all management features"""
+    """Admin main dashboard page"""
     if 'userID' not in session or session.get('role') != 'admin':
         flash('Admin access required.', 'error')
         return redirect('/login')
@@ -988,13 +1046,16 @@ def admin_dashboard():
         cursor.execute("SELECT COUNT(*) FROM user")
         total_users = cursor.fetchone()[0]
         
+        cursor.execute("SELECT COUNT(*) FROM student")
+        total_students = cursor.fetchone()[0]
+        
         cursor.execute("SELECT COUNT(*) FROM tutor")
         total_tutors = cursor.fetchone()[0]
         
         cursor.execute("SELECT COUNT(*) FROM `session`")
         total_sessions = cursor.fetchone()[0]
         
-        # Get pending verifications count (tutors pending + docs pending)
+        # Get pending verifications count
         cursor.execute("SELECT COUNT(*) FROM tutor WHERE verificationStatus = 'pending'")
         pending_tutors_count = cursor.fetchone()[0]
         
@@ -1002,55 +1063,64 @@ def admin_dashboard():
         pending_docs_count = cursor.fetchone()[0]
         pending_verifications = pending_tutors_count + pending_docs_count
         
-        # Get pending tutor verifications (tutors with pending status)
-        cursor.execute("""
-            SELECT t.tutorID, u.fullName, t.verificationStatus, 
-                   COALESCE(v.uploadDate, 'N/A') as uploadDate,
-                   (SELECT COUNT(*) FROM verificationdocument WHERE tutorID = t.tutorID) as doc_count
-            FROM tutor t
-            JOIN user u ON t.tutorID = u.userID
-            LEFT JOIN verificationdocument v ON t.tutorID = v.tutorID AND v.approvalStatus = 'pending'
-            WHERE t.verificationStatus = 'pending'
-            GROUP BY t.tutorID
-            ORDER BY v.uploadDate DESC
-        """)
-        pending_tutors_raw = cursor.fetchall()
+        # Calculate total earnings (example: $50 per completed session)
+        cursor.execute("SELECT COUNT(*) FROM `session` WHERE status = 'completed'")
+        completed_sessions = cursor.fetchone()[0]
+        total_earnings = completed_sessions * 50
         
-        pending_tutors = []
-        for row in pending_tutors_raw:
-            pending_tutors.append({
-                'tutorID': row[0],
-                'fullName': row[1],
-                'verificationStatus': row[2],
-                'uploadDate': row[3].strftime('%Y-%m-%d') if hasattr(row[3], 'strftime') else str(row[3]),
-                'doc_count': row[4]
+        # Get recent sessions
+        cursor.execute("""
+            SELECT s.sessionID, s.courseCode, s.scheduledDate, s.scheduledTime, s.status,
+                   u1.fullName as studentName, u2.fullName as tutorName
+            FROM `session` s
+            JOIN user u1 ON s.studentID = u1.userID
+            JOIN user u2 ON s.tutorID = u2.userID
+            ORDER BY s.scheduledDate DESC, s.scheduledTime DESC
+            LIMIT 20
+        """)
+        recent_sessions_raw = cursor.fetchall()
+        
+        recent_sessions = []
+        for row in recent_sessions_raw:
+            recent_sessions.append({
+                'sessionID': row[0],
+                'courseCode': row[1],
+                'scheduledDate': row[2].strftime('%Y-%m-%d') if hasattr(row[2], 'strftime') else str(row[2]),
+                'scheduledTime': str(row[3]) if row[3] else 'N/A',
+                'status': row[4],
+                'studentName': row[5],
+                'tutorName': row[6]
             })
         
-        # Get pending documents
-        cursor.execute("""
-            SELECT v.documentID, v.tutorID, v.filePath, v.documentType, v.uploadDate, 
-                   u.fullName, t.verificationStatus
-            FROM verificationdocument v
-            JOIN tutor t ON v.tutorID = t.tutorID
-            JOIN user u ON v.tutorID = u.userID
-            WHERE v.approvalStatus = 'pending'
-            ORDER BY v.uploadDate DESC
-        """)
-        pending_docs_raw = cursor.fetchall()
+        cursor.close()
         
-        pending_docs = []
-        for row in pending_docs_raw:
-            pending_docs.append({
-                'documentID': row[0],
-                'tutorID': row[1],
-                'filePath': row[2],
-                'documentType': row[3] or 'Document',
-                'uploadDate': row[4].strftime('%Y-%m-%d %H:%M') if hasattr(row[4], 'strftime') else str(row[4]),
-                'fullName': row[5],
-                'verificationStatus': row[6]
-            })
+        return render_template('admin_dashboard_main.html', 
+                             fullName=session.get('fullName'),
+                             total_users=total_users,
+                             total_students=total_students,
+                             total_tutors=total_tutors,
+                             total_sessions=total_sessions,
+                             pending_verifications=pending_verifications,
+                             total_earnings=total_earnings,
+                             recent_sessions=recent_sessions)
+                             
+    except Exception as e:
+        print(f"Error loading admin dashboard: {e}")
+        flash(f'Unable to load admin dashboard: {str(e)}', 'error')
+        return redirect('/login')
+
+
+@app.route('/admin/users')
+def admin_users():
+    """Admin manage users page"""
+    if 'userID' not in session or session.get('role') != 'admin':
+        flash('Admin access required.', 'error')
+        return redirect('/login')
+
+    try:
+        cursor = mysql.connection.cursor()
         
-        # Get all tutors with their details (removed schoolID reference)
+        # Get all tutors with their details
         cursor.execute("""
             SELECT t.tutorID, u.fullName, u.email, t.verificationStatus, 
                    IFNULL(t.averageRating, 0) as averageRating, 
@@ -1100,48 +1170,161 @@ def admin_dashboard():
                 'session_count': row[4]
             })
         
-        # Get recent sessions
-        cursor.execute("""
-            SELECT s.sessionID, s.courseCode, s.scheduledDate, s.scheduledTime, s.status,
-                   u1.fullName as studentName, u2.fullName as tutorName
-            FROM `session` s
-            JOIN user u1 ON s.studentID = u1.userID
-            JOIN user u2 ON s.tutorID = u2.userID
-            ORDER BY s.scheduledDate DESC, s.scheduledTime DESC
-            LIMIT 20
-        """)
-        recent_sessions_raw = cursor.fetchall()
+        cursor.close()
         
-        recent_sessions = []
-        for row in recent_sessions_raw:
-            recent_sessions.append({
-                'sessionID': row[0],
-                'courseCode': row[1],
-                'scheduledDate': row[2].strftime('%Y-%m-%d') if hasattr(row[2], 'strftime') else str(row[2]),
-                'scheduledTime': str(row[3]) if row[3] else 'N/A',
-                'status': row[4],
-                'studentName': row[5],
-                'tutorName': row[6]
+        return render_template('admin_users.html', 
+                             fullName=session.get('fullName'),
+                             all_tutors_list=all_tutors_list,
+                             all_students=all_students)
+                             
+    except Exception as e:
+        print(f"Error loading admin users: {e}")
+        flash(f'Unable to load users: {str(e)}', 'error')
+        return redirect('/admin')
+
+
+@app.route('/admin/verification')
+def admin_verification():
+    """Admin tutor verification page"""
+    if 'userID' not in session or session.get('role') != 'admin':
+        flash('Admin access required.', 'error')
+        return redirect('/login')
+
+    try:
+        cursor = mysql.connection.cursor()
+        
+        # Get pending tutor verifications
+        cursor.execute("""
+            SELECT t.tutorID, u.fullName, t.verificationStatus, 
+                   COALESCE(v.uploadDate, 'N/A') as uploadDate,
+                   (SELECT COUNT(*) FROM verificationdocument WHERE tutorID = t.tutorID) as doc_count
+            FROM tutor t
+            JOIN user u ON t.tutorID = u.userID
+            LEFT JOIN verificationdocument v ON t.tutorID = v.tutorID AND v.approvalStatus = 'pending'
+            WHERE t.verificationStatus = 'pending'
+            GROUP BY t.tutorID
+            ORDER BY v.uploadDate DESC
+        """)
+        pending_tutors_raw = cursor.fetchall()
+        
+        pending_tutors = []
+        for row in pending_tutors_raw:
+            pending_tutors.append({
+                'tutorID': row[0],
+                'fullName': row[1],
+                'verificationStatus': row[2],
+                'uploadDate': row[3].strftime('%Y-%m-%d') if hasattr(row[3], 'strftime') else str(row[3]),
+                'doc_count': row[4]
+            })
+        
+        # Get pending documents
+        cursor.execute("""
+            SELECT v.documentID, v.tutorID, v.filePath, v.documentType, v.uploadDate, 
+                   u.fullName, t.verificationStatus
+            FROM verificationdocument v
+            JOIN tutor t ON v.tutorID = t.tutorID
+            JOIN user u ON v.tutorID = u.userID
+            WHERE v.approvalStatus = 'pending'
+            ORDER BY v.uploadDate DESC
+        """)
+        pending_docs_raw = cursor.fetchall()
+        
+        pending_docs = []
+        for row in pending_docs_raw:
+            pending_docs.append({
+                'documentID': row[0],
+                'tutorID': row[1],
+                'filePath': row[2],
+                'documentType': row[3] or 'Document',
+                'uploadDate': row[4].strftime('%Y-%m-%d %H:%M') if hasattr(row[4], 'strftime') else str(row[4]),
+                'fullName': row[5],
+                'verificationStatus': row[6]
             })
         
         cursor.close()
         
-        return render_template('admin_dashboard.html', 
+        return render_template('admin_verification.html', 
                              fullName=session.get('fullName'),
-                             total_users=total_users,
-                             total_tutors=total_tutors,
-                             pending_verifications=pending_verifications,
-                             total_sessions=total_sessions,
                              pending_tutors=pending_tutors,
-                             pending_docs=pending_docs,
-                             all_tutors_list=all_tutors_list,
-                             all_students=all_students,
-                             recent_sessions=recent_sessions)
+                             pending_docs=pending_docs)
                              
     except Exception as e:
-        print(f"Error loading admin dashboard: {e}")
-        flash(f'Unable to load admin dashboard: {str(e)}', 'error')
+        print(f"Error loading admin verification: {e}")
+        flash(f'Unable to load verification data: {str(e)}', 'error')
+        return redirect('/admin')
+
+
+@app.route('/admin/courses')
+def admin_courses():
+    """Admin course manager page"""
+    if 'userID' not in session or session.get('role') != 'admin':
+        flash('Admin access required.', 'error')
         return redirect('/login')
+
+    try:
+        cursor = mysql.connection.cursor()
+        
+        # Get all courses with tutor counts
+        cursor.execute("""
+            SELECT c.courseCode, c.courseName, s.schoolName, 
+                   COUNT(DISTINCT tc.tutorID) as tutor_count
+            FROM course c
+            JOIN school s ON c.schoolID = s.schoolID
+            LEFT JOIN tutorcourse tc ON c.courseCode = tc.courseCode
+            GROUP BY c.courseCode, c.courseName, s.schoolName
+            ORDER BY c.courseCode
+        """)
+        all_courses_raw = cursor.fetchall()
+        
+        all_courses = []
+        for row in all_courses_raw:
+            all_courses.append({
+                'courseCode': row[0],
+                'courseName': row[1],
+                'schoolName': row[2],
+                'tutor_count': row[3]
+            })
+        
+        cursor.close()
+        
+        return render_template('admin_courses.html', 
+                             fullName=session.get('fullName'),
+                             all_courses=all_courses)
+                             
+    except Exception as e:
+        print(f"Error loading admin courses: {e}")
+        flash(f'Unable to load courses: {str(e)}', 'error')
+        return redirect('/admin')
+
+
+@app.route('/admin/profile')
+def admin_profile():
+    """Admin profile page"""
+    if 'userID' not in session or session.get('role') != 'admin':
+        flash('Admin access required.', 'error')
+        return redirect('/login')
+
+    try:
+        cursor = mysql.connection.cursor()
+        
+        # Get admin details from database
+        cursor.execute("""
+            SELECT fullName, email FROM user WHERE userID = %s
+        """, (session['userID'],))
+        admin_info = cursor.fetchone()
+        
+        cursor.close()
+        
+        return render_template('admin_profile.html', 
+                             fullName=admin_info[0] if admin_info else session.get('fullName'),
+                             admin_email=admin_info[1] if admin_info else session.get('email', 'admin@zitconnect.com'))
+                             
+    except Exception as e:
+        print(f"Error loading admin profile: {e}")
+        return render_template('admin_profile.html', 
+                             fullName=session.get('fullName'),
+                             admin_email=session.get('email', 'admin@zitconnect.com'))
+
 
 @app.route('/admin/approve-tutor/<int:tutorID>', methods=['POST'])
 def admin_approve_tutor(tutorID):
@@ -1159,7 +1342,12 @@ def admin_approve_tutor(tutorID):
     except Exception as e:
         flash(f'Approval failed: {str(e)}', 'error')
 
+    # Redirect back to the page that made the request
+    referer = request.referrer
+    if referer and '/admin/verification' in referer:
+        return redirect('/admin/verification')
     return redirect('/admin')
+
 
 @app.route('/admin/reject-tutor/<int:tutorID>', methods=['POST'])
 def admin_reject_tutor(tutorID):
@@ -1177,7 +1365,11 @@ def admin_reject_tutor(tutorID):
     except Exception as e:
         flash(f'Rejection failed: {str(e)}', 'error')
 
+    referer = request.referrer
+    if referer and '/admin/verification' in referer:
+        return redirect('/admin/verification')
     return redirect('/admin')
+
 
 @app.route('/admin/approve-doc/<int:documentID>', methods=['POST'])
 def admin_approve_doc(documentID):
@@ -1218,7 +1410,11 @@ def admin_approve_doc(documentID):
     except Exception as e:
         flash(f'Approval failed: {str(e)}', 'error')
 
+    referer = request.referrer
+    if referer and '/admin/verification' in referer:
+        return redirect('/admin/verification')
     return redirect('/admin')
+
 
 @app.route('/admin/reject-doc/<int:documentID>', methods=['POST'])
 def admin_reject_doc(documentID):
@@ -1236,7 +1432,11 @@ def admin_reject_doc(documentID):
     except Exception as e:
         flash(f'Rejection failed: {str(e)}', 'error')
 
+    referer = request.referrer
+    if referer and '/admin/verification' in referer:
+        return redirect('/admin/verification')
     return redirect('/admin')
+
 
 @app.route('/admin/tutor-details/<int:tutorID>')
 def admin_tutor_details(tutorID):
@@ -1256,6 +1456,9 @@ def admin_tutor_details(tutorID):
             WHERE t.tutorID = %s
         """, (tutorID,))
         tutor = cursor.fetchone()
+        
+        if not tutor:
+            return jsonify({'error': 'Tutor not found'}), 404
         
         # Get tutor courses
         cursor.execute("""
@@ -1282,11 +1485,12 @@ def admin_tutor_details(tutorID):
             'email': tutor[2],
             'verificationStatus': tutor[3],
             'averageRating': float(tutor[4]) if tutor[4] else 0.0,
-            'bio': tutor[5],
+            'bio': tutor[5] if tutor[5] else 'No bio provided',
             'courses': [{'courseCode': c[0], 'courseName': c[1]} for c in courses],
             'documents': [{'documentID': d[0], 'filePath': d[1], 'documentType': d[2] or 'Document', 'approvalStatus': d[3]} for d in documents]
         })
     except Exception as e:
+        print(f"Error in admin_tutor_details: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/book-session', methods=['GET', 'POST'])
