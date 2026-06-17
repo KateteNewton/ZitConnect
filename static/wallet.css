@@ -1,18 +1,256 @@
-.material-symbols-outlined {
-    font-variation-settings:
-        'FILL' 0,
-        'wght' 400,
-        'GRAD' 0,
-        'opsz' 24;
+/* ==========================================================================
+   1. Base Setup & App Layout Framework
+   ========================================================================== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
 body {
-    background-color: #f0f2f5;
-    -webkit-tap-highlight-color: transparent;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    min-height: 100vh;
+    font-family: 'Source Sans 3', sans-serif;
 }
 
-.balance-value {
-    color: #2c5f8a;
+/* Master Grid Structure Layout */
+.flex-layout-frame {
+    display: flex;
+    min-height: calc(100vh - 64px);
+    width: 100%;
 }
+
+.main-content {
+    flex-grow: 1;
+    padding: 2rem 1.5rem;
+    margin-bottom: 72px; /* Leaves clean clearing frame for bottom nav layout */
+}
+
+.view-heading {
+    font-family: 'Libre Franklin', sans-serif;
+    color: #16325c;
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+}
+
+/* ==========================================================================
+   2. Appbar Header Component Layout
+   ========================================================================== */
+.top-appbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: #16325c;
+    height: 64px;
+    padding: 0 1.5rem;
+    color: #ffffff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.logo-circle {
+    width: 36px;
+    height: 36px;
+    background-color: #ffffff;
+    color: #16325c;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.875rem;
+}
+
+.header-title {
+    font-family: 'Libre Franklin', sans-serif;
+    font-size: 1.25rem;
+    font-weight: 600;
+    letter-spacing: 0.025em;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+/* ==========================================================================
+   3. Search Bar Integration & Tailwind Forms Override
+   ========================================================================== */
+.search-container {
+    display: flex;
+    align-items: center;
+    background-color: rgba(255, 255, 255, 0.12) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 9999px; /* Complete pill-shape boundary */
+    padding: 0.375rem 0.875rem;
+    width: 180px; /* Locked width framework */
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.search-container:focus-within {
+    background-color: rgba(255, 255, 255, 0.18) !important;
+    border-color: rgba(255, 255, 255, 0.25) !important;
+    width: 210px; /* Fluid broadening layout expansion animation on activation */
+}
+
+.search-icon {
+    font-size: 1.125rem !important;
+    color: rgba(255, 255, 255, 0.6) !important;
+    margin-right: 0.5rem;
+    flex-shrink: 0;
+    user-select: none;
+}
+
+/* 
+   THE CRITICAL FIX: Direct extraction rules targeting input nodes
+   to override Tailwind baseline properties.
+*/
+.search-container input[type="text"].search-input {
+    background-color: transparent !important;
+    background: transparent !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    width: 100%;
+    color: #ffffff !important;
+    font-size: 0.875rem;
+    padding: 0 !important;
+    height: 100%;
+    line-height: 1;
+}
+
+.search-container input[type="text"].search-input::placeholder {
+    color: rgba(255, 255, 255, 0.5) !important;
+}
+
+/* ==========================================================================
+   4. Profile Avatar Shell Frame
+   ========================================================================== */
+.user-avatar-wrapper {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.85);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.user-avatar {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* ==========================================================================
+   5. Desktop Sidebar Panel Elements
+   ========================================================================== */
+.sidebar-drawer {
+    width: 240px;
+    background-color: #19355a;
+    padding: 1.5rem 0.75rem;
+    flex-shrink: 0;
+    display: none; /* Handled gracefully under desktop scaling breakpoints */
+}
+
+.sidebar-menu {
+    display: flex;
+    flex-col: initial;
+    flex-direction: column;
+    gap: 0.375rem;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    color: rgba(255, 255, 255, 0.7);
+    text-decoration: none;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    font-size: 0.925rem;
+    transition: all 0.15s ease;
+}
+
+.nav-item:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: #ffffff;
+}
+
+.nav-item.active {
+    background-color: #2a3e56;
+    color: #ffffff;
+}
+
+/* ==========================================================================
+   6. Mobile Bottom System Navigation Bars
+   ========================================================================== */
+.mobile-navigation-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 68px;
+    background-color: #ffffff;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    padding-bottom: env(safe-area-inset-bottom);
+    z-index: 50;
+}
+
+.mobile-nav-link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #64748b;
+    text-decoration: none;
+    font-size: 0.685rem;
+    font-weight: 600;
+    gap: 2px;
+}
+
+.mobile-nav-link .material-symbols-outlined {
+    font-size: 1.5rem !important;
+}
+
+.mobile-nav-link.active {
+    color: #16325c;
+}
+
+.mobile-active-pill {
+    background-color: #e2e8f0;
+    padding: 4px 20px;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1px;
+}
+
+.mobile-nav-text {
+    font-family: 'Source Sans 3', sans-serif;
+}
+
+/* Responsive Structural Breakpoints */
+@media (min-width: 768px) {
+    .sidebar-drawer {
+        display: block;
+    }
+    .mobile-navigation-bar {
+        display: none;
+    }
+    .main-content {
+        margin-bottom: 0;
+    }
+}   

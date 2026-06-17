@@ -1,302 +1,248 @@
 <!DOCTYPE html>
-<html class="light" lang="en">
+<html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Tutor Wallet | ZitConnect</title>
-
-<link rel="stylesheet" href="styles.css">
-
-<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-
-<link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;600;700&family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet"/>
-
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-
-<script id="tailwind-config">
-tailwind.config = {
-  darkMode: "class",
-  theme: {
-    extend: {
-      colors: {
-        outline: "#73777f",
-        "on-tertiary": "#ffffff",
-        "on-surface": "#1a1c1e",
-        "surface-bright": "#faf9fc",
-        "on-primary": "#ffffff",
-        "inverse-primary": "#abc9f2",
-        "on-background": "#1a1c1e",
-        "inverse-surface": "#2f3033",
-        "secondary-container": "#9eceff",
-        "surface-container": "#eeedf1",
-        "on-primary-container": "#87a4cc",
-        "surface-container-low": "#f4f3f6",
-        "on-primary-fixed-variant": "#2a486b",
-        "on-primary-fixed": "#001c37",
-        "on-error-container": "#93000a",
-        "surface-container-high": "#e9e8eb",
-        "on-secondary-container": "#235882",
-        secondary: "#2f628d",
-        "on-secondary-fixed-variant": "#0f4a74",
-        "on-error": "#ffffff",
-        "error-container": "#ffdad6",
-        "surface-container-lowest": "#ffffff",
-        "on-tertiary-container": "#c49b5f",
-        "secondary-fixed": "#cfe5ff",
-        "on-tertiary-fixed": "#291800",
-        "surface-tint": "#436084",
-        primary: "#1a3a5c",
-        "surface-variant": "#e3e2e5",
-        "primary-fixed": "#d2e4ff",
-        "surface-dim": "#dad9dd",
-        "primary-container": "#1a3a5c",
-        error: "#ba1a1a",
-        "secondary-fixed-dim": "#9bcbfc",
-        "tertiary-fixed-dim": "#ecbf80",
-        "on-secondary-fixed": "#001d33",
-        background: "#f0f2f5",
-        "on-secondary": "#ffffff",
-        "inverse-on-surface": "#f1f0f3",
-        "primary-fixed-dim": "#abc9f2",
-        "surface-container-highest": "#e3e2e5",
-        tertiary: "#331f00",
-        surface: "#faf9fc",
-        "on-tertiary-fixed-variant": "#5f410c",
-        "tertiary-fixed": "#ffddb1",
-        "tertiary-container": "#4f3300",
-        "outline-variant": "#e5e7eb",
-        "on-surface-variant": "#43474e"
-      },
-      borderRadius: {
-        DEFAULT: "8px",
-        lg: "14px",
-        xl: "14px",
-        full: "9999px"
-      },
-      spacing: {
-        "unit-lg": "24px",
-        "unit-md": "16px",
-        "sidebar-width": "280px",
-        "unit-xs": "4px",
-        "container-max": "1440px",
-        "unit-xl": "48px",
-        "gutter": "24px",
-        "unit-sm": "8px",
-        "margin-desktop": "32px",
-        "margin-mobile": "16px"
-      }
-    }
-  }
-}
-</script>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tutor Wallet | ZitConnect</title>
+    
+    <!-- Typography & Icons Configuration -->
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;600;700&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- External Wallet Stylesheet Link -->
+    <link rel="stylesheet" href="/static/wallet.css">
+    
+    <!-- Tailwind Framework Core Configuration -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#16325c",
+                        "sidebar-bg": "#19355a",
+                        "sidebar-active": "#2a3e56"
+                    }
+                }
+            }
+        }
+    </script>
 </head>
+<body class="min-h-screen bg-[#f4f6f8]">
 
-<body class="bg-[#f0f2f5] text-on-surface">
+    <!-- TOP BAR NAVIGATION HEADER -->
+    <header class="top-appbar">
+        <div class="header-left">
+            <div class="logo-circle">
+                <span class="logo-text">zc</span>
+            </div>
+            <h1 class="header-title">ZitConnect</h1>
+        </div>
+        
+        <div class="header-right">
+            <!-- Unified Search Box Container Component -->
+            <div class="search-container">
+                <span class="material-symbols-outlined search-icon">search</span>
+                <input type="text" class="search-input" placeholder="Search...">
+            </div>
+            
+            <!-- Profile Avatar Layout Frame -->
+            <div class="user-avatar-wrapper">
+                <img alt="User Profile" class="user-avatar" src="/static/ai6.png"/>
+            </div>
+        </div>
+    </header>
 
-<header class="fixed top-0 w-full h-16 bg-[#1a3a5c] flex items-center justify-between px-margin-mobile z-50">
-<div class="flex items-center gap-3">
-<div class="w-10 h-10 bg-white rounded-full flex items-center justify-center">
-<span class="text-[#1a3a5c] font-bold">zc</span>
-</div>
-<h1 class="text-white font-bold text-xl">Wallet</h1>
-</div>
+    <!-- CONTENT FRAME SPLIT VIEW HOOK -->
+    <div class="flex-layout-frame">
+        
+        <!-- SIDE NAVIGATION DESKTOP BAR DRAWER -->
+        <aside class="sidebar-drawer">
+            <div class="sidebar-menu">
+                <a class="nav-item" href="#">
+                    <span class="material-symbols-outlined">dashboard</span>
+                    <span class="nav-label">Dashboard</span>
+                </a>
+                <a class="nav-item" href="#">
+                    <span class="material-symbols-outlined">search</span>
+                    <span class="nav-label">Browse Sessions</span>
+                </a>
+                <a class="nav-item" href="#">
+                    <span class="material-symbols-outlined">event_note</span>
+                    <span class="nav-label">My Sessions</span>
+                </a>
+                <a class="nav-item active" href="#">
+                    <span class="material-symbols-outlined">account_balance_wallet</span>
+                    <span class="nav-label">Wallet</span>
+                </a>
+                <a class="nav-item" href="#">
+                    <span class="material-symbols-outlined">person</span>
+                    <span class="nav-label">Profile</span>
+                </a>
+            </div>
+        </aside>
 
-<div class="flex items-center gap-2">
-<button class="material-symbols-outlined text-white p-2">notifications</button>
-</div>
-</header>
+        <!-- MAIN LAYOUT VIEWS CONTAINER PANELS -->
+        <main class="main-content">
+            <div class="max-w-4xl mx-auto px-4 md:px-0">
+                
+                <h2 class="view-heading">My Wallet Dashboard</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+                    
+                    <div class="md:col-span-2 space-y-6">
+                        <!-- Wallet Balance Card -->
+                        <div class="bg-[#16325c] text-white p-6 rounded-xl relative overflow-hidden shadow-sm">
+                            <div class="absolute -right-8 -top-8 w-32 h-32 bg-white/5 rounded-full"></div>
+                            <div class="absolute -left-4 -bottom-4 w-24 h-24 bg-white/5 rounded-full"></div>
+                            
+                            <p class="text-white/70 uppercase tracking-wider text-xs font-semibold mb-2">Available Balance</p>
+                            <h2 class="text-4xl mb-6 font-bold">K 2,450.00</h2>
+                            
+                            <button id="withdraw-btn" class="w-full h-12 bg-white text-[#16325c] font-bold rounded-lg flex items-center justify-center gap-2 hover:bg-slate-100 transition-colors">
+                                <span class="material-symbols-outlined">payments</span>
+                                Withdraw Earnings
+                            </button>
+                        </div>
+                        
+                        <!-- Analytical Metrics Block -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="bg-white border border-[#e2e8f0] p-5 rounded-xl shadow-sm flex flex-col justify-between">
+                                <span class="material-symbols-outlined text-[#16325c] mb-2 text-3xl">account_balance</span>
+                                <div>
+                                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Withdrawn</p>
+                                    <p class="text-[#16325c] text-xl font-bold mt-1">K 12,800</p>
+                                </div>
+                            </div>
+                            <div class="bg-white border border-[#e2e8f0] p-5 rounded-xl shadow-sm flex flex-col justify-between">
+                                <span class="material-symbols-outlined text-[#0f766e] mb-2 text-3xl">analytics</span>
+                                <div>
+                                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Monthly ROI</p>
+                                    <p class="text-[#0f766e] text-xl font-bold mt-1">+18.4%</p>
+                                </div>
+                            </div>
+                        </div>
 
-<main class="pt-20 pb-28 px-margin-mobile max-w-md mx-auto">
+                        <!-- Recent Transaction List Module -->
+                        <section>
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-[#16325c] font-bold text-lg">Recent Earnings</h3>
+                                <button class="text-[#16325c] hover:underline font-semibold text-sm">View All</button>
+                            </div>
+                            
+                            <div class="space-y-3">
+                                <div class="bg-white p-4 border border-[#e2e8f0] rounded-xl flex items-center justify-between shadow-sm">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-[#16325c]">
+                                            <span class="material-symbols-outlined">school</span>
+                                        </div>
+                                        <div>
+                                            <p class="font-bold text-gray-800 text-sm md:text-base">Calculus II Session</p>
+                                            <p class="text-xs text-gray-500">24 Oct • Mr. Chanda Musonda</p>
+                                        </div>
+                                    </div>
+                                    <p class="font-bold text-[#0f766e]">K 150.00</p>
+                                </div>
 
-<section class="mb-6">
-<div class="bg-[#1a3a5c] text-white p-6 rounded-xl relative overflow-hidden shadow-sm">
+                                <div class="bg-white p-4 border border-[#e2e8f0] rounded-xl flex items-center justify-between shadow-sm">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-[#16325c]">
+                                            <span class="material-symbols-outlined">science</span>
+                                        </div>
+                                        <div>
+                                            <p class="font-bold text-gray-800 text-sm md:text-base">Organic Chem Lab</p>
+                                            <p class="text-xs text-gray-500">22 Oct • Mary Kapembwa</p>
+                                        </div>
+                                    </div>
+                                    <p class="font-bold text-[#0f766e]">K 220.00</p>
+                                </div>
 
-<div class="absolute -right-8 -top-8 w-32 h-32 bg-white/5 rounded-full"></div>
-<div class="absolute -left-4 -bottom-4 w-24 h-24 bg-white/5 rounded-full"></div>
+                                <div class="bg-white p-4 border border-[#e2e8f0] rounded-xl flex items-center justify-between shadow-sm">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-[#16325c]">
+                                            <span class="material-symbols-outlined">history_edu</span>
+                                        </div>
+                                        <div>
+                                            <p class="font-bold text-gray-800 text-sm md:text-base">Logic & Philosophy</p>
+                                            <p class="text-xs text-gray-500">20 Oct • Mr. Chanda Musonda</p>
+                                        </div>
+                                    </div>
+                                    <p class="font-bold text-[#0f766e]">K 180.00</p>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
 
-<p class="text-white/70 uppercase tracking-wider mb-2">
-Available Balance
-</p>
+                    <!-- Payout Method Config Side Column -->
+                    <div class="md:col-span-1">
+                        <h3 class="text-[#16325c] font-bold text-lg mb-4">Payout Method</h3>
+                        <div class="bg-white border border-dashed border-[#cbd5e1] p-6 rounded-xl flex flex-col items-center gap-3 text-center shadow-sm">
+                            <div class="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-[#16325c]">
+                                <span class="material-symbols-outlined text-2xl">account_balance_wallet</span>
+                            </div>
+                            <div>
+                                <p class="font-bold text-gray-800 text-sm">Airtel Money</p>
+                                <p class="text-xs text-gray-500 mt-0.5">+260 97***</p>
+                            </div>
+                            <button class="mt-2 text-xs bg-slate-100 hover:bg-slate-200 text-[#16325c] font-bold py-2 px-4 rounded-lg transition-colors">
+                                Change Method
+                            </button>
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+        </main>
+    </div>
 
-<h2 class="text-[40px] mb-6 font-bold">
-K 2,450.00
-</h2>
+    <!-- RESPONSIVE BOTTOM NAVIGATION BAR MOBILE LAYOUT -->
+    <nav class="mobile-navigation-bar">
+        <a class="mobile-nav-link" href="#">
+            <span class="material-symbols-outlined">home</span>
+            <span class="mobile-nav-text">Home</span>
+        </a>
+        <a class="mobile-nav-link" href="#">
+            <span class="material-symbols-outlined">search</span>
+            <span class="mobile-nav-text">Browse</span>
+        </a>
+        <a class="mobile-nav-link" href="#">
+            <span class="material-symbols-outlined">event_note</span>
+            <span class="mobile-nav-text">Sessions</span>
+        </a>
+        <a class="mobile-nav-link active" href="#">
+            <div class="mobile-active-pill">
+                <span class="material-symbols-outlined">account_balance_wallet</span>
+            </div>
+            <span class="mobile-nav-text">Wallet</span>
+        </a>
+        <a class="mobile-nav-link" href="#">
+            <span class="material-symbols-outlined">person</span>
+            <span class="mobile-nav-text">Profile</span>
+        </a>
+    </nav>
 
-<button
-id="withdraw-btn"
-class="w-full h-12 bg-white text-[#1a3a5c] font-bold rounded-lg flex items-center justify-center gap-2">
-<span class="material-symbols-outlined">payments</span>
-Withdraw Earnings
-</button>
+    <!-- Async Processing Micro-interactions Handler -->
+    <script>
+        document.getElementById('withdraw-btn').addEventListener('click', function () {
+            const btn = this;
+            const originalText = btn.innerHTML;
 
-</div>
-</section>
+            btn.innerHTML = '<span class="material-symbols-outlined animate-spin">refresh</span> Processing...';
+            btn.disabled = true;
 
-<div class="grid grid-cols-2 gap-4 mb-8">
+            setTimeout(() => {
+                btn.innerHTML = '<span class="material-symbols-outlined">check_circle</span> Initiated';
+                btn.style.background = '#0f766e';
+                btn.style.color = '#ffffff';
 
-<div class="bg-white border border-[#e5e7eb] p-6 rounded-xl shadow-sm">
-<span class="material-symbols-outlined text-[#2c5f8a] mb-2">account_balance</span>
-<p class="text-sm text-gray-500">Total Withdrawn</p>
-<p class="text-[#1a3a5c] text-xl font-bold">K 12,800</p>
-</div>
-
-<div class="bg-white border border-[#e5e7eb] p-6 rounded-xl shadow-sm">
-<span class="material-symbols-outlined text-[#2c5f8a] mb-2">analytics</span>
-<p class="text-sm text-gray-500">Monthly ROI</p>
-<p class="text-[#1a3a5c] text-xl font-bold">+18.4%</p>
-</div>
-
-</div>
-
-<section class="mb-8">
-
-<div class="flex items-center justify-between mb-4">
-<h3 class="text-[#1a3a5c] font-bold text-xl">
-Recent Earnings
-</h3>
-
-<button class="text-[#2f628d] font-bold">
-View All
-</button>
-</div>
-
-<div class="space-y-3">
-
-<div class="bg-white p-4 border border-[#e5e7eb] rounded-xl flex items-center justify-between shadow-sm">
-<div>
-<p class="font-bold">Calculus II Session</p>
-<p class="text-sm text-gray-500">
-24 Oct • Mr. Chanda Musonda
-</p>
-</div>
-
-<div class="text-right">
-<p class="font-bold balance-value">
-K 150.00
-</p>
-</div>
-</div>
-
-<div class="bg-white p-4 border border-[#e5e7eb] rounded-xl flex items-center justify-between shadow-sm">
-<div>
-<p class="font-bold">Organic Chem Lab</p>
-<p class="text-sm text-gray-500">
-22 Oct • Mary Kapembwa
-</p>
-</div>
-
-<div class="text-right">
-<p class="font-bold balance-value">
-K 220.00
-</p>
-</div>
-</div>
-
-<div class="bg-white p-4 border border-[#e5e7eb] rounded-xl flex items-center justify-between shadow-sm">
-<div>
-<p class="font-bold">Logic & Philosophy</p>
-<p class="text-sm text-gray-500">
-20 Oct • Mr. Chanda Musonda
-</p>
-</div>
-
-<div class="text-right">
-<p class="font-bold balance-value">
-K 180.00
-</p>
-</div>
-</div>
-
-</div>
-
-</section>
-
-<section>
-
-<h3 class="text-[#1a3a5c] font-bold text-xl mb-4">
-Payout Method
-</h3>
-
-<div class="bg-white border border-dashed border-[#e5e7eb] p-8 rounded-xl flex flex-col items-center gap-3 shadow-sm">
-
-<div class="w-12 h-12 rounded-full bg-[#1a3a5c] flex items-center justify-center text-white">
-<span class="material-symbols-outlined">
-add_card
-</span>
-</div>
-
-<p>Airtel Money +260 97...</p>
-
-<button class="text-[#1a3a5c] font-bold">
-Change Method
-</button>
-
-</div>
-
-</section>
-
-</main>
-
-<nav class="fixed bottom-0 left-0 w-full flex justify-around items-center px-4 py-2 bg-white border-t border-[#e5e7eb] h-[72px]">
-
-<a class="flex flex-col items-center">
-<span class="material-symbols-outlined">home</span>
-<span>Home</span>
-</a>
-
-<a class="flex flex-col items-center">
-<span class="material-symbols-outlined">calendar_month</span>
-<span>Schedule</span>
-</a>
-
-<a class="flex flex-col items-center bg-[#1a3a5c] text-white rounded-full px-5 py-1">
-<span class="material-symbols-outlined">account_balance_wallet</span>
-<span>Wallet</span>
-</a>
-
-<a class="flex flex-col items-center">
-<span class="material-symbols-outlined">person</span>
-<span>Profile</span>
-</a>
-
-</nav>
-
-<script>
-document.getElementById('withdraw-btn').addEventListener('click', function () {
-
-const btn = this;
-const originalText = btn.innerHTML;
-
-btn.innerHTML =
-'<span class="material-symbols-outlined animate-spin">refresh</span> Processing...';
-
-btn.disabled = true;
-
-setTimeout(() => {
-
-btn.innerHTML =
-'<span class="material-symbols-outlined">check_circle</span> Initiated';
-
-btn.classList.add('bg-green-50','text-green-700');
-
-setTimeout(() => {
-
-btn.innerHTML = originalText;
-
-btn.classList.remove('bg-green-50','text-green-700');
-
-btn.disabled = false;
-
-}, 3000);
-
-}, 1500);
-
-});
-</script>
-
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.style.background = '';
+                    btn.style.color = '';
+                    btn.disabled = false;
+                }, 3000);
+            }, 1500);
+        });
+    </script>
 </body>
 </html>
-
-
-
-
