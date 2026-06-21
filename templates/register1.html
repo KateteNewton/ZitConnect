@@ -62,101 +62,64 @@
     </style>
   </head>
   <body>
-    <div class="container">
-      <div class="left">
-        <h2 class="left-h2">ZC</h2>
-        <h1>ZitConnect</h1>
-        <h4>Peer to Peer Academic Support</h4>
-      </div>
-      <div class="right">
-        <h2>Create Account</h2>
-        <p>Register using ZitConnect</p>
-        
-        {% with messages = get_flashed_messages(with_categories=true) %}
-          {% if messages %}
-            <ul class="flash-messages">
-              {% for category, message in messages %}
-                <li class="{{ category }}">{{ message }}</li>
-              {% endfor %}
-            </ul>
-          {% endif %}
-        {% endwith %}
-        
-        <form class="form" method="POST" action="/register" id="registerForm">
-          <label class="name">Full Name</label>
-          <input class="firstTextArea" type="text" name="name" required>
+    <div class="login-container">
+        <div style="display:flex; flex-direction:row; align-items:flex-start; gap: 15px; margin-bottom: 10px;">
+            <div class="mobile-logo" style="margin-top: 8px;">
+                <div class="zc-circle-mobile"><span>ZC</span></div>
+            </div>
+            <div style="flex:1;">
+        <form class="login-form" method="POST" action="/register" id="registerForm">
+            <h1>Create Account</h1>
+            <p style="margin-top:-10px; text-align:center; color:#fff; font-size:14px;">Register using ZitConnect</p>
 
-          <label class="user">Username</label>
-          <input class="secondTextArea" type="text" name="username" required>
+            <!-- Flash messages are present server-side but hidden from view to avoid UI clashes.
+                 They still work in the background.
+            -->
+            <div style="display:none;">
+              {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                  <ul class="flash-messages">
+                    {% for category, message in messages %}
+                      <li class="{{ category }}">{{ message }}</li>
+                    {% endfor %}
+                  </ul>
+                {% endif %}
+              {% endwith %}
+            </div>
 
-          <label class="email">Email Address</label>
-          <input class="thirdTextArea" type="email" name="email" required>
 
-          <label class="password">Password</label>
-          <div class="password-container">
-            <input class="fouthTextArea" type="password" name="password" id="password" required>
-          </div>
+            <div class="login-form-group">
+                <label>Full Name</label>
+                <input type="text" name="name" required>
+            </div>
 
-          <label class="cp">Confirm Password</label>
-          <div class="password-container">
-            <input class="fifthTextArea" type="password" name="confirm_password" id="confirmPassword" required>
-            <div class="password-match-indicator" id="passwordIndicator"></div>
-          </div>
+            <div class="login-form-group">
+                <label>Username</label>
+                <input type="text" name="username" required>
+            </div>
 
-          <button class="next-button" type="submit" id="submitBtn">Next</button>
+            <div class="login-form-group">
+                <label>Email Address</label>
+                <input type="email" name="email" required>
+            </div>
+
+            <div class="login-form-group">
+                <label>Password</label>
+                <input type="password" name="password" id="password" required>
+            </div>
+
+            <div class="login-form-group">
+                <label>Confirm Password</label>
+                <input type="password" name="confirm_password" id="confirmPassword" required>
+                <div class="password-match-indicator" id="passwordIndicator"></div>
+            </div>
+
+            <button class="login-btn" type="submit" id="submitBtn">Next</button>
+            
+            <p>Already have an account? <a href="/login">Login</a></p>
         </form>
-        <div class="login">
-          Already Have An Account? <a href="/login">Login</a>
+            </div>
         </div>
-      </div>
-    </div>
-
-    <script>
-      const passwordInput = document.getElementById('password');
-      const confirmPasswordInput = document.getElementById('confirmPassword');
-      const passwordIndicator = document.getElementById('passwordIndicator');
-      const submitBtn = document.getElementById('submitBtn');
-
-      function checkPasswordMatch() {
-        const password = passwordInput.value;
-        const confirmPassword = confirmPasswordInput.value;
-
-        if (confirmPassword === '') {
-          passwordIndicator.style.display = 'none';
-          submitBtn.disabled = false;
-          return;
-        }
-
-        if (password === confirmPassword && password !== '') {
-          passwordIndicator.className = 'password-match-indicator match';
-          passwordIndicator.textContent = '✓ Passwords match';
-          submitBtn.disabled = false;
-        } else {
-          passwordIndicator.className = 'password-match-indicator no-match';
-          passwordIndicator.textContent = '✗ Passwords do not match';
-          submitBtn.disabled = true;
-        }
-      }
-
-      passwordInput.addEventListener('input', checkPasswordMatch);
-      confirmPasswordInput.addEventListener('input', checkPasswordMatch);
-
-      // Prevent form submission if passwords don't match
-      document.getElementById('registerForm').addEventListener('submit', function(e) {
-        if (passwordInput.value !== confirmPasswordInput.value) {
-          e.preventDefault();
-          alert('Passwords do not match! Please check and try again.');
-        }
-      });
-    </script>
-  </body>
-</html> 
-        </form>
-        <div class="login">
-          Already Have An Account?<a href="#">Login</a>
-        </div>
-      </div>
-    </div>
 
     <script>
       const passwordInput = document.getElementById('password');
