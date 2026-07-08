@@ -316,7 +316,7 @@ def login():
                             flash(f'Welcome, {user[1]}! Your tutor account is fully verified.', 'success')
                             return redirect('/tutor-dashboard')
                         elif tutor_status == 'pending':
-                            flash('Welcome! Please complete your profile verification to start tutoring and earn badges.', 'warning')
+                            flash('Welcome! Please complete your profile verification to earn badges.', 'warning')
                             return redirect('/tutor-dashboard')
                         elif tutor_status == 'rejected':
                             flash('Your tutor application has been rejected. Please contact support for more information.', 'error')
@@ -427,32 +427,43 @@ def tutor_profile():
                 document = request.files.get('document')
                 if not document or document.filename == '':
                     flash('Please choose a document to upload', 'error')
-                elif not allowed_file(document.filename):
-                    flash('Only PDF, JPG, JPEG and PNG files are allowed', 'error')
-                else:
-                    filename = secure_filename(document.filename)
-                    upload_folder = os.path.join(app.root_path, 'static', 'uploads')
-                    os.makedirs(upload_folder, exist_ok=True)
-
-                    save_path = os.path.join(upload_folder, filename)
-                    base, ext = os.path.splitext(filename)
-                    counter = 1
-                    while os.path.exists(save_path):
-                        filename = f"{base}_{counter}{ext}"
-                        save_path = os.path.join(upload_folder, filename)
-                        counter += 1
-
-                    document.save(save_path)
-                    relative_path = f"uploads/{filename}"
-
-                    cursor.execute(
-                        "INSERT INTO verificationdocument (tutorID, filePath, approvalStatus) VALUES (%s, %s, 'pending')",
-                        (session['userID'], relative_path)
-                    )
-                    mysql.connection.commit()
-                    flash('Document uploaded successfully', 'success')
                     return redirect('/tutor-profile')
+                
+                if not allowed_file(document.filename):
+                    flash('Only PDF, JPG, JPEG and PNG files are allowed', 'error')
+                    return redirect('/tutor-profile')
+                
+                # Create upload folder if it doesn't exist
+                upload_folder = os.path.join(app.root_path, 'static', 'uploads')
+                os.makedirs(upload_folder, exist_ok=True)
 
+                # Secure the filename and save
+                filename = secure_filename(document.filename)
+                # Add timestamp to prevent filename conflicts
+                import time
+                name, ext = os.path.splitext(filename)
+                timestamp = int(time.time())
+                filename = f"{name}_{timestamp}{ext}"
+                
+                save_path = os.path.join(upload_folder, filename)
+                document.save(save_path)
+                relative_path = f"uploads/{filename}"
+
+                # Insert into verificationdocument with documentType
+                # Determine document type based on filename or default to 'result_slip'
+                document_type = 'result_slip'  # default
+                if 'transcript' in filename.lower():
+                    document_type = 'transcript'
+                
+                cursor.execute(
+                    "INSERT INTO verificationdocument (tutorID, documentType, filePath, approvalStatus) VALUES (%s, %s, %s, 'pending')",
+                    (session['userID'], document_type, relative_path)
+                )
+                mysql.connection.commit()
+                flash('Document uploaded successfully and submitted for verification.', 'success')
+                return redirect('/tutor-profile')
+
+        # GET request - fetch all data
         # Get tutor info
         cursor.execute(
             "SELECT fullName, userName, email, profilePicture FROM user WHERE userID = %s",
@@ -496,14 +507,18 @@ def tutor_profile():
 
     except Exception as e:
         flash(f'Error loading profile: {str(e)}', 'error')
-        cursor.close()
+        print(f"Profile Error: {e}")
+        import traceback
+        traceback.print_exc()
+        if 'cursor' in locals():
+            cursor.close()
         return redirect('/tutor-dashboard')
 
 @app.route('/tutor-dashboard')
 def tutor_dashboard():
     """Tutor dashboard route with real data and verification status"""
     if 'userID' not in session or session.get('role') != 'tutor':
-        flash('Please login to access the tutor dashboard', 'error')
+        flash('Please login to access the dashboard', 'error')
         return redirect('/login')
     
     try:
@@ -518,12 +533,13 @@ def tutor_dashboard():
         verification_status = tutor_info[0] if tutor_info else 'pending'
         average_rating = float(tutor_info[1]) if tutor_info and tutor_info[1] else 0.0
         
-        # Check if tutor has uploaded documents
+        # Check if tutor has uploaded any documents
         cursor.execute(
             "SELECT COUNT(*) FROM verificationdocument WHERE tutorID = %s",
             (session['userID'],)
         )
         doc_count = cursor.fetchone()[0]
+        has_uploaded_docs = doc_count > 0
         
         # Check if tutor has added courses
         cursor.execute(
@@ -531,6 +547,25 @@ def tutor_dashboard():
             (session['userID'],)
         )
         course_count = cursor.fetchone()[0]
+        has_added_courses = course_count > 0
+        
+        # Check if tutor has approved documents
+        cursor.execute(
+            "SELECT COUNT(*) FROM verificationdocument WHERE tutorID = %s AND approvalStatus = 'approved'",
+            (session['userID'],)
+        )
+        approved_docs = cursor.fetchone()[0]
+        has_approved_docs = approved_docs > 0
+        
+        # Auto-verify tutor if they have approved documents AND courses
+        if has_approved_docs and has_added_courses and verification_status == 'pending':
+            cursor.execute(
+                "UPDATE tutor SET verificationStatus = 'approved' WHERE tutorID = %s",
+                (session['userID'],)
+            )
+            mysql.connection.commit()
+            verification_status = 'approved'
+            flash('Congratulations! Your account has been fully verified!', 'success')
         
         # Check if tutor has earned any badges
         cursor.execute(
@@ -543,9 +578,6 @@ def tutor_dashboard():
             (session['userID'],)
         )
         badges = cursor.fetchall()
-        
-        # DEBUG: Print the tutor ID to console
-        print(f"Fetching sessions for tutor ID: {session['userID']}")
         
         # Get ALL sessions for this tutor
         cursor.execute(
@@ -571,9 +603,6 @@ def tutor_dashboard():
         )
         all_sessions = cursor.fetchall()
         
-        # DEBUG: Print how many sessions found
-        print(f"Found {len(all_sessions)} sessions for tutor {session['userID']}")
-        
         # Separate sessions by status
         pending_sessions = []
         confirmed_sessions = []
@@ -582,7 +611,6 @@ def tutor_dashboard():
         declined_sessions = []
         
         for sess in all_sessions:
-            # Handle date formatting safely
             scheduled_date = sess[2]
             if scheduled_date:
                 if hasattr(scheduled_date, 'strftime'):
@@ -592,7 +620,6 @@ def tutor_dashboard():
             else:
                 formatted_date = 'N/A'
             
-            # Handle time formatting safely
             scheduled_time = sess[3]
             if scheduled_time:
                 if hasattr(scheduled_time, 'strftime'):
@@ -613,9 +640,6 @@ def tutor_dashboard():
                 'studentID': sess[7]
             }
             
-            print(f"Session {sess[0]}: status={sess[5]}, date={formatted_date}")
-            
-            # Categorize by status
             if sess[5] == 'pending':
                 pending_sessions.append(session_data)
             elif sess[5] == 'confirmed':
@@ -628,12 +652,9 @@ def tutor_dashboard():
                 declined_sessions.append(session_data)
         
         # Calculate total earnings (only for completed sessions)
-        total_earnings = len(completed_sessions) * 50  # Assuming $50 per session
+        total_earnings = len(completed_sessions) * 50
         
         # Get upcoming confirmed sessions (future dates)
-        from datetime import date
-        today = date.today()
-        
         cursor.execute(
             """
             SELECT s.sessionID, s.courseCode, s.scheduledDate, s.scheduledTime, 
@@ -649,7 +670,6 @@ def tutor_dashboard():
         upcoming_sessions_raw = cursor.fetchall()
         upcoming_sessions = []
         for sess in upcoming_sessions_raw:
-            # Handle date formatting
             scheduled_date = sess[2]
             if scheduled_date:
                 if hasattr(scheduled_date, 'strftime'):
@@ -683,14 +703,13 @@ def tutor_dashboard():
         # Format badges
         badges_list = [{'name': b[0], 'description': b[1]} for b in badges]
         
-        print(f"Final counts - Pending: {len(pending_sessions)}, Confirmed: {len(confirmed_sessions)}, Completed: {len(completed_sessions)}")
-        
         return render_template('tutor_dashboard.html', 
                              fullName=session.get('fullName'),
                              verification_status=verification_status,
                              average_rating=average_rating,
-                             has_uploaded_docs=doc_count > 0,
-                             has_added_courses=course_count > 0,
+                             has_uploaded_docs=has_uploaded_docs,
+                             has_added_courses=has_added_courses,
+                             has_approved_docs=has_approved_docs,
                              badges=badges_list,
                              total_earnings=total_earnings,
                              pending_count=len(pending_sessions),
@@ -715,6 +734,7 @@ def tutor_dashboard():
                              average_rating=0.0,
                              has_uploaded_docs=False,
                              has_added_courses=False,
+                             has_approved_docs=False,
                              badges=[],
                              total_earnings=0,
                              pending_count=0,
@@ -732,7 +752,7 @@ def tutor_dashboard():
 def student_dashboard():
     """Student dashboard route - shows student sessions and available tutors"""
     if 'userID' not in session or session.get('role') != 'student':
-        flash('Please login to access the student dashboard', 'error')
+        flash('Please login to access the dashboard', 'error')
         return redirect('/login')
 
     try:
@@ -845,55 +865,7 @@ def logout():
     flash('You have been logged out successfully', 'success')
     return redirect('/login')
 
-# ============ Tutor Management Routes ============
-
-@app.route('/upload-docs', methods=['GET', 'POST'])
-def upload_docs():
-    """Allow logged-in tutors to upload verification documents"""
-    if 'userID' not in session or session.get('role') != 'tutor':
-        flash('Only logged-in tutors can upload documents.', 'error')
-        return redirect('/login')
-
-    if request.method == 'POST':
-        document = request.files.get('document')
-        if not document or document.filename == '':
-            flash('Please choose a document to upload.', 'error')
-            return render_template('upload_docs.html')
-
-        if not allowed_file(document.filename):
-            flash('Only PDF, JPG, JPEG and PNG files are allowed.', 'error')
-            return render_template('upload_docs.html')
-
-        filename = secure_filename(document.filename)
-        upload_folder = os.path.join(app.root_path, 'static', 'uploads')
-        os.makedirs(upload_folder, exist_ok=True)
-
-        save_path = os.path.join(upload_folder, filename)
-        base, ext = os.path.splitext(filename)
-        counter = 1
-        while os.path.exists(save_path):
-            filename = f"{base}_{counter}{ext}"
-            save_path = os.path.join(upload_folder, filename)
-            counter += 1
-
-        document.save(save_path)
-        relative_path = f"uploads/{filename}"
-
-        try:
-            cursor = mysql.connection.cursor()
-            cursor.execute(
-                "INSERT INTO verificationdocument (tutorID, filePath, approvalStatus) VALUES (%s, %s, 'pending')",
-                (session['userID'], relative_path)
-            )
-            mysql.connection.commit()
-            cursor.close()
-            flash('Document uploaded successfully and submitted for verification.', 'success')
-            return redirect('/tutor-dashboard')
-        except Exception as e:
-            flash(f'Upload failed: {str(e)}', 'error')
-            return render_template('upload_docs.html')
-
-    return render_template('upload_docs.html')
+# ============ Tutor Management Routes ============ #
 
 @app.route('/manage-courses', methods=['GET', 'POST'])
 def manage_courses():
@@ -945,7 +917,7 @@ def search():
     try:
         cursor = mysql.connection.cursor()
         
-        # Get all tutors for the searched course - REMOVED verification status filter
+        # Get all tutors for the searched course
         cursor.execute("""
             SELECT DISTINCT 
                 u.userID, 
@@ -1036,7 +1008,7 @@ def search():
 def admin_dashboard():
     """Admin main dashboard page"""
     if 'userID' not in session or session.get('role') != 'admin':
-        flash('Admin access required.', 'error')
+        flash('Login to access this dashboard.', 'error')
         return redirect('/login')
 
     try:
@@ -1397,12 +1369,21 @@ def admin_approve_doc(documentID):
             """, (tutorID,))
             approved_count = cursor.fetchone()[0]
             
-            # If this is the first approved document, update tutor status to approved
-            if approved_count >= 1:
-                cursor.execute("UPDATE tutor SET verificationStatus = 'approved' WHERE tutorID = %s AND verificationStatus = 'pending'", (tutorID,))
+            # Check if tutor has added courses
+            cursor.execute("""
+                SELECT COUNT(*) FROM tutorcourse WHERE tutorID = %s
+            """, (tutorID,))
+            course_count = cursor.fetchone()[0]
+            
+            # If tutor has approved documents AND courses, update tutor status to approved
+            if approved_count >= 1 and course_count >= 1:
+                cursor.execute("UPDATE tutor SET verificationStatus = 'approved' WHERE tutorID = %s", (tutorID,))
+                flash('Document approved and tutor is now fully verified!', 'success')
+            elif approved_count >= 1:
+                # If they have documents but no courses yet, keep pending
+                flash('Document approved. Tutor needs to add courses before full verification.', 'warning')
             
             mysql.connection.commit()
-            flash('Document approved successfully.', 'success')
         else:
             flash('Document not found.', 'error')
             

@@ -70,7 +70,7 @@
                     </div>
                   </div>
 
-                  <div class="rating">⭐ {{ tutor.averageRating }} <span class="course-count">({{ tutor.courses|length }} Courses)</span></div>
+                  <div class="rating"> {{ tutor.averageRating }} <span class="course-count">({{ tutor.courses|length }} Courses)</span></div>
                   {% if tutor.bio %}
                     <div class="desc">{{ tutor.bio[:80] }}{% if tutor.bio|length > 80 %}...{% endif %}</div>
                   {% else %}
