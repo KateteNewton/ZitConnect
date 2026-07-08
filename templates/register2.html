@@ -147,20 +147,24 @@
         <form class="login-form" method="POST" action="/register/complete" id="registrationForm">
             <h1>Complete Registration</h1>
             
-            {% with messages = get_flashed_messages(with_categories=true) %}
-              {% if messages %}
-                <ul class="flash-messages">
-                  {% for category, message in messages %}
-                    <li class="{{ category }}">{{ message }}</li>
-                  {% endfor %}
-                </ul>
-              {% endif %}
-            {% endwith %}
+            <div style="display:none;">
+              {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                  <ul class="flash-messages">
+                    {% for category, message in messages %}
+                      <li class="{{ category }}">{{ message }}</li>
+                    {% endfor %}
+                  </ul>
+                {% endif %}
+              {% endwith %}
+            </div>
+            
+            <div style="text-align:center;">
             
             <!-- Role Selection First -->
             <div class="login-form-group">
-                <label>I want to register as a:</label>
-                <div class="radio-group">
+                <label style="display:block; text-align:center;">I want to register as a:</label>
+                <div class="radio-group" style="justify-content:center;">
                     <label>
                         <input type="radio" name="role" value="student" required id="roleStudent"> Student
                     </label>
@@ -169,6 +173,7 @@
                     </label>
                 </div>
             </div>
+
 
             <!-- Student Fields (hidden by default) -->
             <div id="studentFields" class="form-section hidden">
