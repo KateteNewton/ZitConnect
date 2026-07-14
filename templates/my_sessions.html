@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Sessions - ZitConnect</title>
+    <link rel="stylesheet" href="/static/css/tutor_dashboard.css">
+    <link rel="stylesheet" href="/static/css/tutor_profile.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <style>
+        /* Extra tab styles to match profile page */
+        .profile-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 0;
+        }
+        .profile-tab-btn {
+            background: transparent;
+            border: none;
+            padding: 12px 24px;
+            font-size: 15px;
+            font-weight: 600;
+            color: #6b7280;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .profile-tab-btn:hover {
+            color: #1a3a5c;
+        }
+        .profile-tab-btn.active {
+            color: #1a3a5c;
+            border-bottom-color: #1a3a5c;
+        }
+        .profile-tab-btn i {
+            font-size: 18px;
+        }
+        .profile-tab-content {
+            display: none;
+        }
+        .profile-tab-content.active {
+            display: block;
+        }
+        /* Session table overrides for consistency */
+        .Container {
+            display: grid;
+            grid-template-columns: 2fr 1.5fr 1.2fr 1fr 1fr 1.2fr 1.5fr;
+            background: #f8f9fa;
+            padding: 14px 20px;
+            border-bottom: 2px solid #e0e0e0;
+            border-radius: 8px;
+            margin-bottom: 5px;
+        }
+        .Container h3 {
+            color: #495057;
+            font-size: 14px;
+            font-weight: 600;
+            margin: 0;
+        }
+        .session-row {
+            display: grid;
+            grid-template-columns: 2fr 1.5fr 1.2fr 1fr 1fr 1.2fr 1.5fr;
+            padding: 14px 20px;
+            border-bottom: 1px solid #e9ecef;
+            align-items: center;
+        }
+        .session-row:hover {
+            background: #f8f9fa;
+        }
+        .session-row span {
+            color: #333;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .status-pending { color: #ffc107; }
+        .status-confirmed { color: #28a745; }
+        .status-completed { color: #17a2b8; }
+        .status-cancelled { color: #6c757d; }
+        .status-declined { color: #dc3545; }
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        .accept-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background 0.2s;
+        }
+        .accept-btn:hover { background: #1e7e34; }
+        .decline-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background 0.2s;
+        }
+        .decline-btn:hover { background: #bd2130; }
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #6c757d;
+        }
+        .empty-state i {
+            font-size: 48px;
+            color: #d1d5db;
+            margin-bottom: 12px;
+        }
+        .empty-state p {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1a3a5c;
+            margin: 0;
+        }
+        .empty-state small {
+            display: block;
+            margin-top: 8px;
+            font-size: 14px;
+        }
+        /* Group session cards */
+        .group-session-card {
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            padding: 16px 20px;
+            margin-bottom: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .group-session-card .info {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            align-items: center;
+        }
+        .group-session-card .info span {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 14px;
+        }
+        .group-session-card .badge {
+            background: #e9ecef;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .group-session-card .badge.unlocked {
+            background: #d4edda;
+            color: #155724;
+        }
+        .group-session-card .badge.locked {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .form-hint {
+            font-size: 13px;
+            color: #6c757d;
+            margin-top: 4px;
+        }
+        @media (max-width: 768px) {
+            .Container, .session-row {
+                grid-template-columns: 1fr;
+                gap: 6px;
+            }
+            .Container h3 { display: none; }
+            .group-session-card .info {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 6px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="Dashboard">
+        <!-- Sidebar – same as tutor dashboard -->
+        <div class="left">
+            <div class="Header">
+                <div class="logo-circle"></div>
+                <h1>ZitConnect</h1>
+            </div>
+            <a href="/tutor-dashboard" class="menu-item">
+                <i class="bi bi-speedometer2 menu-icon"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="/my-sessions" class="menu-item active-menu" style="text-decoration: none; color: inherit;">
+                <i class="bi bi-calendar-check menu-icon"></i>
+                <span>My Sessions</span>
+            </a>
+            <a href="/wallet" class="menu-item">
+                <i class="bi bi-currency-dollar menu-icon"></i>
+                <span>Earnings</span>
+            </a>
+            <a href="/manage-courses" class="menu-item">
+                <i class="bi bi-journal-bookmark menu-icon"></i>
+                <span>Course Management</span>
+            </a>
+            <a href="/tutor-profile" class="menu-item">
+                <i class="bi bi-person-circle menu-icon"></i>
+                <span>Profile</span>
+            </a>
+            <a href="/logout" class="menu-item logout-item">
+                <i class="bi bi-box-arrow-right menu-icon"></i>
+                <span>Logout</span>
+            </a>
+        </div>
+
+        <!-- Main Content -->
+        <div class="right">
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <div class="Welcome_part">
+                <h2>My Sessions</h2>
+                <p>Manage your tutoring sessions and create group sessions.</p>
+            </div>
+
+            <!-- Tabs -->
+            <div class="profile-tabs">
+                <button class="profile-tab-btn active" onclick="switchTab('all-sessions')">
+                    <i class="bi bi-list-ul"></i> All Sessions
+                </button>
+                <button class="profile-tab-btn" onclick="switchTab('create-group')">
+                    <i class="bi bi-plus-circle"></i> Create Group
+                </button>
+                <button class="profile-tab-btn" onclick="switchTab('my-groups')">
+                    <i class="bi bi-people"></i> My Group Sessions
+                </button>
+            </div>
+
+            <!-- Tab 1: All Sessions -->
+            <div id="all-sessions" class="profile-tab-content active">
+                <div class="bottom">
+                    <div class="Container">
+                        <h3>Student</h3>
+                        <h3>Course</h3>
+                        <h3>Date</h3>
+                        <h3>Time</h3>
+                        <h3>Type</h3>
+                        <h3>Status</h3>
+                        <h3>Actions</h3>
+                    </div>
+                    {% if sessions and sessions|length > 0 %}
+                        {% for session in sessions %}
+                        <div class="session-row">
+                            <span><i class="bi bi-person-graduate"></i> {{ session.studentName }}</span>
+                            <span><i class="bi bi-code-square"></i> {{ session.courseCode }}</span>
+                            <span><i class="bi bi-calendar"></i> {{ session.scheduledDate }}</span>
+                            <span><i class="bi bi-clock"></i> {{ session.scheduledTime }}</span>
+                            <span><i class="bi bi-people"></i> {{ session.sessionType|capitalize }}</span>
+                            <span class="status-{{ session.status }}">
+                                <i class="bi
+                                    {% if session.status == 'pending' %}bi-clock-history
+                                    {% elif session.status == 'confirmed' %}bi-check-circle-fill
+                                    {% elif session.status == 'completed' %}bi-check2-all
+                                    {% elif session.status == 'cancelled' %}bi-x-circle
+                                    {% elif session.status == 'declined' %}bi-slash-circle
+                                    {% endif %}
+                                "></i> {{ session.status|capitalize }}
+                            </span>
+                            <span>
+                                {% if session.status == 'pending' %}
+                                    <div class="action-buttons">
+                                        <form action="/session/accept/{{ session.sessionID }}" method="post" style="display:inline;">
+                                            <button type="submit" class="accept-btn"><i class="bi bi-check-lg"></i> Accept</button>
+                                        </form>
+                                        <form action="/session/decline/{{ session.sessionID }}" method="post" style="display:inline;">
+                                            <button type="submit" class="decline-btn"><i class="bi bi-x-lg"></i> Decline</button>
+                                        </form>
+                                    </div>
+                                {% else %}
+                                    <span style="color: #adb5bd;">—</span>
+                                {% endif %}
+                            </span>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-state">
+                            <i class="bi bi-inbox"></i>
+                            <p>No sessions yet</p>
+                            <small>When students book sessions with you, they will appear here.</small>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Tab 2: Create Group Session (Updated) -->
+            <div id="create-group" class="profile-tab-content">
+                <div class="bottom" style="padding: 30px;">
+                    <h3 style="margin-bottom:20px;"><i class="bi bi-plus-circle"></i> Create a New Group Session</h3>
+                    <form action="/create-group-session" method="post" id="createGroupForm">
+                        <!-- Course -->
+                        <div class="form-group" style="margin-bottom: 16px;">
+                            <label for="courseCode">Course</label>
+                            <select name="courseCode" id="courseCode" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd;">
+                                <option value="">Select a course</option>
+                                {% for course in tutor_courses %}
+                                    <option value="{{ course[0] }}">{{ course[0] }} – {{ course[1] }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Date & Time -->
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                            <div class="form-group">
+                                <label for="scheduledDate">Date</label>
+                                <input type="date" name="scheduledDate" id="scheduledDate" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd;">
+                            </div>
+                            <div class="form-group">
+                                <label for="scheduledTime">Time</label>
+                                <input type="time" name="scheduledTime" id="scheduledTime" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd;">
+                            </div>
+                        </div>
+
+                        <!-- Capacity & Price -->
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px;">
+                            <div class="form-group">
+                                <label for="maxCapacity">Max Students (1–100)</label>
+                                <input type="number" name="maxCapacity" id="maxCapacity" min="1" max="100" placeholder="e.g. 10" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd;">
+                            </div>
+                            <div class="form-group">
+                                <label for="pricePerStudent">Price per Student (K)</label>
+                                <input type="number" step="0.01" name="pricePerStudent" id="pricePerStudent" placeholder="0.00" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd;">
+                            </div>
+                        </div>
+
+                        <!-- Meeting Platform (now includes Physical) -->
+                        <div class="form-group" style="margin-top:16px;">
+                            <label for="meetingPlatform">Meeting Platform</label>
+                            <select name="meetingPlatform" id="meetingPlatform" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd;">
+                                <option value="Zoom">Zoom</option>
+                                <option value="Google Meet">Google Meet</option>
+                                <option value="Microsoft Teams">Microsoft Teams</option>
+                                <option value="Physical">Physical (In‑person)</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+
+                        <!-- Meeting Link (WhatsApp/Telegram group or any URL) -->
+                        <div class="form-group" style="margin-top:16px;">
+                            <label for="accessLink">Meeting Link (WhatsApp/Telegram group or other)</label>
+                            <input type="url" name="accessLink" id="accessLink" placeholder="https://chat.whatsapp.com/... or https://t.me/..." required style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd;">
+                            <div class="form-hint">
+                                <i class="bi bi-info-circle"></i> This link will be visible to students only after they have paid for the session.
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn-submit" style="margin-top:20px;">
+                            <i class="bi bi-check-circle"></i> Create Session
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Tab 3: My Group Sessions (Updated display) -->
+            <div id="my-groups" class="profile-tab-content">
+                <div class="bottom" style="padding: 20px;">
+                    <h3 style="margin-bottom:15px;"><i class="bi bi-people"></i> Group Sessions You Created</h3>
+                    {% if my_group_sessions and my_group_sessions|length > 0 %}
+                        {% for gs in my_group_sessions %}
+                        <div class="group-session-card">
+                            <div class="info">
+                                <span><strong>{{ gs.courseCode }}</strong> – {{ gs.courseName }}</span>
+                                <span><i class="bi bi-calendar"></i> {{ gs.scheduledDate }}</span>
+                                <span><i class="bi bi-clock"></i> {{ gs.scheduledTime }}</span>
+                                <span><i class="bi bi-people"></i> {{ gs.enrolledCount }}/{{ gs.maxCapacity }}</span>
+                                <span><i class="bi bi-currency"></i> K{{ "%.2f"|format(gs.pricePerStudent) }}</span>
+                                <span><i class="bi bi-geo-alt"></i> {{ gs.meetingPlatform }}</span>
+                                <span class="badge {% if gs.accessLinkUnlocked %}unlocked{% else %}locked{% endif %}">
+                                    {% if gs.accessLinkUnlocked %}
+                                        <i class="bi bi-unlock"></i> Link Unlocked
+                                    {% else %}
+                                        <i class="bi bi-lock"></i> Link Locked
+                                    {% endif %}
+                                </span>
+                            </div>
+                            <div>
+                                {% if gs.accessLinkUnlocked %}
+                                    <a href="{{ gs.accessLink }}" target="_blank" class="btn-submit" style="padding:6px 16px; text-decoration:none; background:#2c5f8a; color:white; border-radius:6px; font-size:13px;">
+                                        <i class="bi bi-link-45deg"></i> Join
+                                    </a>
+                                {% else %}
+                                    <span style="color:#6c757d; font-size:13px;"><i class="bi bi-lock"></i> Waiting for payment</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-state">
+                            <i class="bi bi-people"></i>
+                            <p>No group sessions created yet</p>
+                            <small>Use the "Create Group" tab to set up a new group session.</small>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+    function switchTab(tabId) {
+        // Hide all tab contents
+        document.querySelectorAll('.profile-tab-content').forEach(el => el.classList.remove('active'));
+        // Remove active class from all buttons
+        document.querySelectorAll('.profile-tab-btn').forEach(btn => btn.classList.remove('active'));
+        // Show selected tab
+        document.getElementById(tabId).classList.add('active');
+        // Activate the corresponding button (find by onclick)
+        const buttons = document.querySelectorAll('.profile-tab-btn');
+        buttons.forEach(btn => {
+            if (btn.getAttribute('onclick').includes(tabId)) {
+                btn.classList.add('active');
+            }
+        });
+    }
+
+    // Auto‑switch to tab from URL parameter on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const tab = urlParams.get('tab');
+        if (tab) {
+            const buttons = document.querySelectorAll('.profile-tab-btn');
+            buttons.forEach(btn => {
+                const onclickAttr = btn.getAttribute('onclick');
+                if (onclickAttr && onclickAttr.includes(`'${tab}'`)) {
+                    btn.click();
+                }
+            });
+        }
+    });
+</script>
+
+</body>
+</html>

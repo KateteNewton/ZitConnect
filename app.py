@@ -1,8 +1,11 @@
 from flask import Flask, jsonify, render_template, request, redirect, session, flash, url_for
 from flask_mysqldb import MySQL
-from datetime import timedelta
+from datetime import timedelta, datetime, date
 from werkzeug.utils import secure_filename
+from decimal import Decimal
 import os
+import json
+import requests
 import re
 
 app = Flask(__name__)
@@ -817,13 +820,13 @@ def student_dashboard():
 
 @app.route('/tutor/<int:tutorID>')
 def view_tutor(tutorID):
-    """Allow students to view a tutor's public profile and courses"""
     if 'userID' not in session or session.get('role') != 'student':
         flash('Please login as a student to view tutor profiles.', 'error')
         return redirect('/login')
 
     try:
         cursor = mysql.connection.cursor()
+        # Get tutor details
         cursor.execute(
             "SELECT u.userID, u.fullName, u.userName, u.profilePicture, u.email, IFNULL(t.averageRating,0), t.verificationStatus, IFNULL(t.bio,'') "
             "FROM user u JOIN tutor t ON u.userID = t.tutorID WHERE u.userID = %s",
@@ -834,11 +837,40 @@ def view_tutor(tutorID):
             flash('Tutor not found', 'error')
             return redirect('/student-dashboard')
 
+        # Get tutor courses
         cursor.execute(
             "SELECT c.courseCode, c.courseName FROM tutorcourse tc JOIN course c ON tc.courseCode = c.courseCode WHERE tc.tutorID = %s",
             (tutorID,)
         )
         courses = cursor.fetchall()
+
+        # Get average rating and total count
+        cursor.execute(
+            "SELECT AVG(stars), COUNT(*) FROM rating WHERE tutorID = %s",
+            (tutorID,)
+        )
+        rating_stats = cursor.fetchone()
+        avg_rating = float(rating_stats[0]) if rating_stats[0] else 0.0
+        rating_count = rating_stats[1] if rating_stats[1] else 0
+
+        # Check if student has a completed session with this tutor
+        has_completed_session = False
+        cursor.execute(
+            "SELECT sessionID FROM `session` WHERE studentID = %s AND tutorID = %s AND status = 'completed' LIMIT 1",
+            (session['userID'], tutorID)
+        )
+        if cursor.fetchone():
+            has_completed_session = True
+
+        # Check if student already rated this tutor
+        already_rated = False
+        cursor.execute(
+            "SELECT ratingID FROM rating WHERE studentID = %s AND tutorID = %s LIMIT 1",
+            (session['userID'], tutorID)
+        )
+        if cursor.fetchone():
+            already_rated = True
+
         cursor.close()
 
         tutor = {
@@ -847,16 +879,66 @@ def view_tutor(tutorID):
             'userName': row[2],
             'profilePicture': row[3],
             'email': row[4],
-            'averageRating': float(row[5]) if row[5] else 0.0,
+            'averageRating': avg_rating,
+            'ratingCount': rating_count,
             'verificationStatus': row[6],
             'bio': row[7] if len(row) > 7 else ''
         }
 
-        return render_template('tutor_view.html', fullName=session.get('fullName'), tutor=tutor, courses=[{'courseCode': c[0], 'courseName': c[1]} for c in courses])
+        return render_template('tutor_view.html',
+                               fullName=session.get('fullName'),
+                               tutor=tutor,
+                               courses=[{'courseCode': c[0], 'courseName': c[1]} for c in courses],
+                               has_completed_session=has_completed_session,
+                               already_rated=already_rated)
     except Exception as e:
         flash(f'Error loading tutor profile: {str(e)}', 'error')
         print(f"Error in view_tutor: {e}")
         return redirect('/student-dashboard')
+    
+@app.route('/rate-tutor', methods=['POST'])
+def rate_tutor():
+    if 'userID' not in session or session.get('role') != 'student':
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    tutor_id = request.form.get('tutorID', type=int)
+    stars = request.form.get('stars', type=int)
+    comment = request.form.get('comment', '').strip()
+
+    if not tutor_id or not stars or stars < 1 or stars > 5:
+        flash('Invalid rating.', 'error')
+        return redirect(request.referrer or '/student-dashboard')
+
+    try:
+        cursor = mysql.connection.cursor()
+        # Check if student already rated this tutor
+        cursor.execute(
+            "SELECT ratingID FROM rating WHERE studentID = %s AND tutorID = %s",
+            (session['userID'], tutor_id)
+        )
+        existing = cursor.fetchone()
+        if existing:
+            flash('You have already rated this tutor.', 'error')
+            return redirect(request.referrer or '/student-dashboard')
+
+        # Insert rating (sessionID = NULL)
+        cursor.execute(
+            "INSERT INTO rating (sessionID, studentID, tutorID, stars, feedbackComment) VALUES (NULL, %s, %s, %s, %s)",
+            (session['userID'], tutor_id, stars, comment)
+        )
+        # Update tutor average rating
+        cursor.execute(
+            "UPDATE tutor SET averageRating = (SELECT AVG(stars) FROM rating WHERE tutorID = %s) WHERE tutorID = %s",
+            (tutor_id, tutor_id)
+        )
+        mysql.connection.commit()
+        cursor.close()
+        flash('Thank you for your rating!', 'success')
+    except Exception as e:
+        mysql.connection.rollback()
+        flash(f'Error saving rating: {str(e)}', 'error')
+
+    return redirect(request.referrer or '/student-dashboard')
 
 @app.route('/logout')
 def logout():
@@ -1476,11 +1558,11 @@ def admin_tutor_details(tutorID):
 
 @app.route('/book-session', methods=['GET', 'POST'])
 def book_session():
-    """Create a new student booking request"""
     if 'userID' not in session or session.get('role') != 'student':
         flash('Please login as a student to book a session.', 'error')
         return redirect('/login')
 
+    # --- POST: Handle individual booking (unchanged) ---
     if request.method == 'POST':
         tutor_id = request.form.get('tutorID')
         course_code = request.form.get('courseCode', '').strip()
@@ -1507,12 +1589,579 @@ def book_session():
             flash(f'Booking failed: {str(e)}', 'error')
             return redirect('/book-session')
 
-    tutor_id = request.args.get('tutorID', '')
-    return render_template('book_session.html', fullName=session.get('fullName'),tutor_id=tutor_id)
+    # --- GET: Show booking form ---
+    tutor_id = request.args.get('tutorID', type=int)
+    if not tutor_id:
+        flash('Please select a tutor first.', 'error')
+        return redirect('/student-dashboard')
+
+    cursor = mysql.connection.cursor()
+
+    # 1. Get tutor details (name)
+    cursor.execute("SELECT fullName FROM user WHERE userID = %s", (tutor_id,))
+    tutor = cursor.fetchone()
+    if not tutor:
+        flash('Tutor not found.', 'error')
+        return redirect('/student-dashboard')
+    tutor_name = tutor[0]
+
+    # 2. Get courses this tutor teaches
+    cursor.execute("""
+        SELECT c.courseCode, c.courseName
+        FROM tutorcourse tc
+        JOIN course c ON tc.courseCode = c.courseCode
+        WHERE tc.tutorID = %s
+    """, (tutor_id,))
+    courses = cursor.fetchall()
+
+    # 3. Get available group sessions for this tutor
+    cursor.execute("""
+        SELECT s.sessionID, s.courseCode, c.courseName,
+               s.scheduledDate, s.scheduledTime,
+               g.maxCapacity, g.enrolledCount, g.pricePerStudent,
+               g.meetingPlatform, g.accessLink
+        FROM session s
+        JOIN groupsession g ON s.sessionID = g.groupSessionID
+        JOIN course c ON s.courseCode = c.courseCode
+        WHERE s.tutorID = %s
+          AND g.enrolledCount < g.maxCapacity
+          AND s.scheduledDate >= CURDATE()
+          AND s.status = 'pending'
+        ORDER BY s.scheduledDate ASC, s.scheduledTime ASC
+    """, (tutor_id,))
+    group_sessions_raw = cursor.fetchall()
+    cursor.close()
+
+    # Format group sessions into a list of dictionaries
+    group_sessions = []
+    for gs in group_sessions_raw:
+        # gs[3] = scheduledDate, gs[4] = scheduledTime
+        formatted_date = gs[3].strftime('%Y-%m-%d') if gs[3] and hasattr(gs[3], 'strftime') else str(gs[3]) if gs[3] else ''
+        formatted_time = gs[4].strftime('%H:%M') if gs[4] and hasattr(gs[4], 'strftime') else str(gs[4]) if gs[4] else ''
+        group_sessions.append({
+            'sessionID': gs[0],
+            'courseCode': gs[1],
+            'courseName': gs[2],
+            'scheduledDate': formatted_date,
+            'scheduledTime': formatted_time,
+            'maxCapacity': gs[5],
+            'enrolledCount': gs[6],
+            'pricePerStudent': float(gs[7]) if gs[7] else 0.0,
+            'meetingPlatform': gs[8],
+            'accessLink': gs[9]
+        })
+
+    return render_template('book_session.html',
+                           fullName=session.get('fullName'),
+                           tutor_id=tutor_id,
+                           tutor_name=tutor_name,
+                           courses=courses,
+                           group_sessions=group_sessions)
+
+
+@app.route('/set-availability', methods=['POST'])
+def set_availability():
+    if 'userID' not in session or session.get('role') != 'tutor':
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    data = request.get_json()
+    if not data or 'slots' not in data:
+        return jsonify({'error': 'Missing slots data'}), 400
+
+    tutor_id = session['userID']
+    slots = data['slots']   # expected: list of {"day": "Monday", "time": "09:00-10:00"}
+
+    try:
+        cursor = mysql.connection.cursor()
+        # Delete existing slots for this tutor
+        cursor.execute("DELETE FROM availability WHERE tutorID = %s", (tutor_id,))
+        # Insert new slots
+        for slot in slots:
+            day = slot.get('day')
+            time_slot = slot.get('time')
+            if day and time_slot:
+                cursor.execute(
+                    "INSERT INTO availability (tutorID, dayOfWeek, timeSlot) VALUES (%s, %s, %s)",
+                    (tutor_id, day, time_slot)
+                )
+        mysql.connection.commit()
+        cursor.close()
+        return jsonify({'success': True, 'message': 'Availability updated'})
+    except Exception as e:
+        mysql.connection.rollback()
+        return jsonify({'error': str(e)}), 500
+    
+
+@app.route('/create-group-session', methods=['GET', 'POST'])
+def create_group_session():
+    if 'userID' not in session or session.get('role') != 'tutor':
+        flash('Please login as a tutor.', 'error')
+        return redirect('/login')
+
+    # Check if tutor is approved
+    cursor = mysql.connection.cursor()
+    cursor.execute("SELECT verificationStatus FROM tutor WHERE tutorID = %s", (session['userID'],))
+    status = cursor.fetchone()
+    cursor.close()
+    if not status or status[0] != 'approved':
+        flash('Your account must be approved to create group sessions.', 'error')
+        return redirect('/tutor-dashboard')
+
+    if request.method == 'POST':
+        course_code = request.form.get('courseCode', '').strip()
+        scheduled_date = request.form.get('scheduledDate')
+        scheduled_time = request.form.get('scheduledTime')
+        max_capacity = request.form.get('maxCapacity', type=int)
+        price = request.form.get('pricePerStudent', type=float)
+        meeting_platform = request.form.get('meetingPlatform', '').strip()
+        access_link = request.form.get('accessLink', '').strip()
+
+        # Validate required fields
+        if not all([course_code, scheduled_date, scheduled_time, max_capacity, price]):
+            flash('All fields are required.', 'error')
+            return redirect('/my-sessions?tab=create-group')
+
+        try:
+            cursor = mysql.connection.cursor()
+            # Insert into session table (studentID is NULL for group sessions)
+            cursor.execute(
+                """INSERT INTO `session` 
+                   (studentID, tutorID, courseCode, sessionType, scheduledDate, scheduledTime, status)
+                   VALUES (%s, %s, %s, 'group', %s, %s, 'pending')""",
+                (None, session['userID'], course_code, scheduled_date, scheduled_time)
+            )
+            session_id = cursor.lastrowid
+
+            # Insert into groupsession
+            cursor.execute(
+                """INSERT INTO groupsession 
+                   (groupSessionID, maxCapacity, enrolledCount, pricePerStudent, meetingPlatform, accessLink, accessLinkUnlocked)
+                   VALUES (%s, %s, 0, %s, %s, %s, 0)""",
+                (session_id, max_capacity, price, meeting_platform, access_link)
+            )
+            mysql.connection.commit()
+            cursor.close()
+            flash('Group session created successfully!', 'success')
+            return redirect('/my-sessions?tab=my-groups')
+        except Exception as e:
+            mysql.connection.rollback()
+            flash(f'Error creating session: {str(e)}', 'error')
+            return redirect('/my-sessions?tab=create-group')
+
+    # GET request – redirect to the My Sessions page with the create-group tab active
+    return redirect('/my-sessions?tab=create-group')
+
+@app.route('/group-sessions')
+def group_sessions():
+    if 'userID' not in session or session.get('role') != 'student':
+        flash('Please login as a student.', 'error')
+        return redirect('/login')
+
+    try:
+        cursor = mysql.connection.cursor()
+        # Select group sessions that are not full and scheduled in the future
+        cursor.execute("""
+            SELECT s.sessionID, s.courseCode, c.courseName, s.scheduledDate, s.scheduledTime,
+                   u.fullName AS tutorName, g.maxCapacity, g.enrolledCount, g.pricePerStudent,
+                   g.meetingPlatform, g.accessLink, g.accessLinkUnlocked
+            FROM session s
+            JOIN groupsession g ON s.sessionID = g.groupSessionID
+            JOIN tutor t ON s.tutorID = t.tutorID
+            JOIN user u ON t.tutorID = u.userID
+            JOIN course c ON s.courseCode = c.courseCode
+            WHERE g.enrolledCount < g.maxCapacity
+              AND s.scheduledDate >= CURDATE()
+              AND s.status = 'pending'   -- group sessions are pending until payment?
+              -- Actually status might be 'confirmed' once tutor creates it? We'll treat as 'pending' initially.
+              -- For group sessions, we can consider them 'available' if not full.
+            ORDER BY s.scheduledDate ASC, s.scheduledTime ASC
+        """)
+        rows = cursor.fetchall()
+        cursor.close()
+
+        sessions = []
+        for row in rows:
+            sessions.append({
+                'sessionID': row[0],
+                'courseCode': row[1],
+                'courseName': row[2],
+                'scheduledDate': row[3].strftime('%Y-%m-%d') if row[3] else '',
+                'scheduledTime': str(row[4]) if row[4] else '',
+                'tutorName': row[5],
+                'maxCapacity': row[6],
+                'enrolledCount': row[7],
+                'pricePerStudent': float(row[8]) if row[8] else 0.0,
+                'meetingPlatform': row[9],
+                'accessLink': row[10],
+                'accessLinkUnlocked': row[11]
+            })
+        return render_template('group_sessions.html', sessions=sessions)
+    except Exception as e:
+        flash(f'Error loading group sessions: {str(e)}', 'error')
+        return redirect('/student-dashboard')
+    
+@app.route('/join-session/<int:groupSessionID>', methods=['POST'])
+def join_session(groupSessionID):
+    if 'userID' not in session or session.get('role') != 'student':
+        flash('Please login as a student.', 'error')
+        return redirect('/login')
+
+    student_id = session['userID']
+
+    try:
+        cursor = mysql.connection.cursor()
+        # Check if session exists and not full
+        cursor.execute(
+            "SELECT maxCapacity, enrolledCount, pricePerStudent FROM groupsession WHERE groupSessionID = %s",
+            (groupSessionID,)
+        )
+        group = cursor.fetchone()
+        if not group:
+            flash('Group session not found.', 'error')
+            return redirect('/group-sessions')
+
+        max_cap, enrolled, price = group
+        if enrolled >= max_cap:
+            flash('This session is fully booked.', 'error')
+            return redirect('/group-sessions')
+
+        # Check if student already has a pending or successful payment for this session
+        cursor.execute(
+            "SELECT paymentID FROM payment WHERE groupSessionID = %s AND studentID = %s AND paymentStatus IN ('pending','successful')",
+            (groupSessionID, student_id)
+        )
+        existing = cursor.fetchone()
+        if existing:
+            flash('You have already joined this session or have a pending payment.', 'error')
+            return redirect('/group-sessions')
+
+        # Create a pending payment record
+        cursor.execute(
+            "INSERT INTO payment (groupSessionID, studentID, amount, paymentStatus) VALUES (%s, %s, %s, 'pending')",
+            (groupSessionID, student_id, price)
+        )
+        payment_id = cursor.lastrowid
+        mysql.connection.commit()
+        cursor.close()
+
+        # Redirect to payment page
+        return redirect(url_for('payment_page', paymentID=payment_id))
+    except Exception as e:
+        mysql.connection.rollback()
+        flash(f'Error joining session: {str(e)}', 'error')
+        return redirect('/group-sessions')
+    
+@app.route('/payment/<int:paymentID>', methods=['GET', 'POST'])
+def payment_page(paymentID):
+    if 'userID' not in session or session.get('role') != 'student':
+        flash('Please login.', 'error')
+        return redirect('/login')
+
+    cursor = mysql.connection.cursor()
+    # Fetch payment details with session and tutor info
+    cursor.execute("""
+        SELECT p.paymentID, p.amount, p.paymentStatus, p.transactionID,
+               s.sessionID, s.courseCode, s.scheduledDate, s.scheduledTime,
+               u.fullName AS tutorName, g.meetingPlatform, g.accessLink,
+               g.groupSessionID, g.pricePerStudent
+        FROM payment p
+        JOIN groupsession g ON p.groupSessionID = g.groupSessionID
+        JOIN session s ON g.groupSessionID = s.sessionID
+        JOIN tutor t ON s.tutorID = t.tutorID
+        JOIN user u ON t.tutorID = u.userID
+        WHERE p.paymentID = %s AND p.studentID = %s
+    """, (paymentID, session['userID']))
+    payment = cursor.fetchone()
+    cursor.close()
+
+    if not payment:
+        flash('Payment record not found.', 'error')
+        return redirect('/student-dashboard')
+
+    # If payment already successful, redirect to confirmation
+    if payment[2] == 'successful':
+        return redirect(url_for('payment_confirmation', paymentID=paymentID))
+
+    if request.method == 'POST':
+        # Simulate Lenco payment processing – always succeeds for demo
+        try:
+            import uuid
+            transaction_id = str(uuid.uuid4())
+
+            cursor = mysql.connection.cursor()
+            # Update payment status
+            cursor.execute(
+                "UPDATE payment SET paymentStatus = 'successful', transactionID = %s WHERE paymentID = %s",
+                (transaction_id, paymentID)
+            )
+            # Increment enrolledCount and unlock access link
+            group_session_id = payment[11]
+            cursor.execute(
+                "UPDATE groupsession SET enrolledCount = enrolledCount + 1, accessLinkUnlocked = 1 WHERE groupSessionID = %s",
+                (group_session_id,)
+            )
+
+            # Get tutor ID from the session table
+            cursor.execute(
+                "SELECT tutorID FROM session WHERE sessionID = %s",
+                (group_session_id,)
+            )
+            tutor_row = cursor.fetchone()
+            if not tutor_row:
+                flash('Tutor not found for this session.', 'error')
+                mysql.connection.rollback()
+                return redirect('/student-dashboard')
+
+            tutor_id = tutor_row[0]
+            amount = float(payment[1])
+            commission = amount * 0.10  # 10% platform fee
+            tutor_credit = amount - commission
+
+            # Credit tutor wallet (create if not exists)
+            cursor.execute("SELECT walletID FROM wallet WHERE tutorID = %s", (tutor_id,))
+            wallet = cursor.fetchone()
+            if wallet:
+                cursor.execute(
+                    "UPDATE wallet SET availableBalance = availableBalance + %s WHERE tutorID = %s",
+                    (tutor_credit, tutor_id)
+                )
+            else:
+                cursor.execute(
+                    "INSERT INTO wallet (tutorID, availableBalance, totalWithdrawn) VALUES (%s, %s, 0)",
+                    (tutor_id, tutor_credit)
+                )
+
+            # Create notifications
+            cursor.execute(
+                "INSERT INTO notification (userID, message) VALUES (%s, %s)",
+                (session['userID'], f'Your payment for session {paymentID} was successful. Access link is now available.')
+            )
+            cursor.execute(
+                "INSERT INTO notification (userID, message) VALUES (%s, %s)",
+                (tutor_id, f'A student has joined your group session. You earned K{tutor_credit:.2f} (after commission).')
+            )
+
+            mysql.connection.commit()
+            cursor.close()
+            flash('Payment successful!', 'success')
+            return redirect(url_for('payment_confirmation', paymentID=paymentID))
+
+        except Exception as e:
+            mysql.connection.rollback()
+            flash(f'Payment processing failed: {str(e)}', 'error')
+            return render_template('group_payment.html', payment=payment)
+
+    # GET – show payment form
+    return render_template('group_payment.html', payment=payment)
+
+@app.route('/payment-confirmation/<int:paymentID>')
+def payment_confirmation(paymentID):
+    if 'userID' not in session:
+        flash('Please login.', 'error')
+        return redirect('/login')
+
+    cursor = mysql.connection.cursor()
+    cursor.execute("""
+        SELECT p.paymentID, p.amount, p.paymentStatus, p.transactionID,
+               s.courseCode, s.scheduledDate, s.scheduledTime,
+               u.fullName AS tutorName, g.accessLink, g.meetingPlatform
+        FROM payment p
+        JOIN groupsession g ON p.groupSessionID = g.groupSessionID
+        JOIN session s ON g.groupSessionID = s.sessionID
+        JOIN tutor t ON s.tutorID = t.tutorID
+        JOIN user u ON t.tutorID = u.userID
+        WHERE p.paymentID = %s AND p.studentID = %s AND p.paymentStatus = 'successful'
+    """, (paymentID, session['userID']))
+    payment = cursor.fetchone()
+    cursor.close()
+
+    if not payment:
+        flash('Payment not found or not successful.', 'error')
+        return redirect('/student-dashboard')
+
+    return render_template('payment_confirmation.html', payment=payment)
+
+@app.route('/rate-session/<int:sessionID>', methods=['GET', 'POST'])
+def rate_session(sessionID):
+    if 'userID' not in session or session.get('role') != 'student':
+        flash('Please login as a student.', 'error')
+        return redirect('/login')
+
+    # Check if session exists, is completed, and belongs to this student
+    cursor = mysql.connection.cursor()
+    cursor.execute(
+        "SELECT s.sessionID, s.tutorID, s.courseCode, u.fullName AS tutorName FROM session s "
+        "JOIN tutor t ON s.tutorID = t.tutorID JOIN user u ON t.tutorID = u.userID "
+        "WHERE s.sessionID = %s AND s.studentID = %s AND s.status = 'completed'",
+        (sessionID, session['userID'])
+    )
+    session_data = cursor.fetchone()
+    if not session_data:
+        flash('Session not found or not completed.', 'error')
+        return redirect('/student-dashboard')
+
+    if request.method == 'POST':
+        stars = request.form.get('stars', type=int)
+        comment = request.form.get('feedback', '').strip()
+
+        if not stars or stars < 1 or stars > 5:
+            flash('Please provide a rating between 1 and 5 stars.', 'error')
+            return render_template('rate_session.html', session=session_data)
+
+        try:
+            cursor.execute(
+                "INSERT INTO rating (sessionID, studentID, tutorID, stars, feedbackComment) VALUES (%s, %s, %s, %s, %s)",
+                (sessionID, session['userID'], session_data[1], stars, comment)
+            )
+            # Recalculate tutor average rating
+            cursor.execute(
+                "UPDATE tutor SET averageRating = (SELECT AVG(stars) FROM rating WHERE tutorID = %s) WHERE tutorID = %s",
+                (session_data[1], session_data[1])
+            )
+            mysql.connection.commit()
+            cursor.close()
+            flash('Thank you for your rating!', 'success')
+            return redirect('/student-dashboard')
+        except Exception as e:
+            mysql.connection.rollback()
+            flash(f'Error saving rating: {str(e)}', 'error')
+            return render_template('rate_session.html', session=session_data)
+
+    # GET - show rating form
+    return render_template('rate_session.html', session=session_data)
+
+@app.route('/wallet')
+def wallet():
+    if 'userID' not in session or session.get('role') != 'tutor':
+        flash('Please login as a tutor.', 'error')
+        return redirect('/login')
+
+    tutor_id = session['userID']
+    cursor = mysql.connection.cursor()
+    
+    # Get wallet balance
+    cursor.execute(
+        "SELECT availableBalance, totalWithdrawn FROM wallet WHERE tutorID = %s",
+        (tutor_id,)
+    )
+    wallet = cursor.fetchone()
+    if not wallet:
+        cursor.execute(
+            "INSERT INTO wallet (tutorID, availableBalance, totalWithdrawn) VALUES (%s, 0, 0)",
+            (tutor_id,)
+        )
+        mysql.connection.commit()
+        available = 0
+        total_withdrawn = 0
+    else:
+        available = float(wallet[0])
+        total_withdrawn = float(wallet[1])
+
+    # Get recent earnings (10% platform commission deducted)
+    cursor.execute("""
+        SELECT p.paymentDate, s.courseCode, p.amount, 
+               (p.amount * 0.9) AS tutor_earnings
+        FROM payment p
+        JOIN groupsession g ON p.groupSessionID = g.groupSessionID
+        JOIN session s ON g.groupSessionID = s.sessionID
+        WHERE s.tutorID = %s AND p.paymentStatus = 'successful'
+        ORDER BY p.paymentDate DESC
+        LIMIT 20
+    """, (tutor_id,))
+    transactions = cursor.fetchall()
+    cursor.close()
+
+    transaction_list = []
+    for t in transactions:
+        transaction_list.append({
+            'date': t[0].strftime('%Y-%m-%d %H:%M') if t[0] else '',
+            'course': t[1],
+            'amount': float(t[2]),
+            'earned': float(t[3])
+        })
+
+    return render_template('wallet.html', 
+                           availableBalance=available,
+                           totalWithdrawn=total_withdrawn,
+                           transactions=transaction_list)
+
+@app.route('/withdraw', methods=['POST'])
+def withdraw():
+    if 'userID' not in session or session.get('role') != 'tutor':
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    amount = request.form.get('amount', type=float)
+    if not amount or amount <= 0:
+        flash('Invalid amount.', 'error')
+        return redirect('/wallet')
+
+    tutor_id = session['userID']
+    cursor = mysql.connection.cursor()
+    cursor.execute("SELECT availableBalance FROM wallet WHERE tutorID = %s", (tutor_id,))
+    row = cursor.fetchone()
+    if not row or float(row[0]) < amount:
+        flash('Insufficient balance.', 'error')
+        return redirect('/wallet')
+
+    try:
+        # Simulate payout request to Lenco
+        # In production, call Lenco API to initiate payout
+        # Assume success
+        new_balance = float(row[0]) - amount
+        cursor.execute(
+            "UPDATE wallet SET availableBalance = %s, totalWithdrawn = totalWithdrawn + %s WHERE tutorID = %s",
+            (new_balance, amount, tutor_id)
+        )
+        # Create notification for tutor
+        cursor.execute(
+            "INSERT INTO notification (userID, message) VALUES (%s, %s)",
+            (tutor_id, f'Your withdrawal of K{amount:.2f} has been processed.')
+        )
+        mysql.connection.commit()
+        cursor.close()
+        flash('Withdrawal successful!', 'success')
+    except Exception as e:
+        mysql.connection.rollback()
+        flash(f'Withdrawal failed: {str(e)}', 'error')
+    return redirect('/wallet')
+
+@app.route('/notifications')
+def notifications():
+    if 'userID' not in session:
+        flash('Please login.', 'error')
+        return redirect('/login')
+    cursor = mysql.connection.cursor()
+    cursor.execute(
+        "SELECT notificationID, message, isRead, createdAt FROM notification WHERE userID = %s ORDER BY createdAt DESC",
+        (session['userID'],)
+    )
+    rows = cursor.fetchall()
+    cursor.close()
+    notifs = []
+    for row in rows:
+        notifs.append({
+            'id': row[0],
+            'message': row[1],
+            'isRead': bool(row[2]),
+            'createdAt': row[3].strftime('%Y-%m-%d %H:%M') if row[3] else ''
+        })
+    return render_template('notifications.html', notifications=notifs)
+
+@app.route('/notifications/mark-read/<int:notificationID>', methods=['POST'])
+def mark_notification_read(notificationID):
+    if 'userID' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    cursor = mysql.connection.cursor()
+    cursor.execute(
+        "UPDATE notification SET isRead = 1 WHERE notificationID = %s AND userID = %s",
+        (notificationID, session['userID'])
+    )
+    mysql.connection.commit()
+    cursor.close()
+    return jsonify({'success': True})
 
 @app.route('/session/accept/<int:sessionID>', methods=['POST'])
 def accept_session(sessionID):
-    """Accept a pending session request"""
     if 'userID' not in session or session.get('role') != 'tutor':
         flash('Only tutors can accept sessions.', 'error')
         return redirect('/login')
@@ -1523,6 +2172,20 @@ def accept_session(sessionID):
             "UPDATE `session` SET status = 'confirmed' WHERE sessionID = %s AND tutorID = %s",
             (sessionID, session['userID'])
         )
+        # Get student ID and course code
+        cursor.execute(
+            "SELECT studentID, courseCode FROM `session` WHERE sessionID = %s",
+            (sessionID,)
+        )
+        sess = cursor.fetchone()
+        if sess:
+            student_id = sess[0]
+            course_code = sess[1]
+            # Notify student
+            cursor.execute(
+                "INSERT INTO notification (userID, message) VALUES (%s, %s)",
+                (student_id, f'Your session request for {course_code} has been accepted.')
+            )
         mysql.connection.commit()
         cursor.close()
         flash('Session request accepted.', 'success')
@@ -1531,22 +2194,44 @@ def accept_session(sessionID):
     
     return redirect('/tutor-dashboard')
 
-# Replace the decline_session route with this:
+@app.route('/api/unread-count')
+def unread_count():
+    if 'userID' not in session:
+        return jsonify({'count': 0})
+    cursor = mysql.connection.cursor()
+    cursor.execute(
+        "SELECT COUNT(*) FROM notification WHERE userID = %s AND isRead = 0",
+        (session['userID'],)
+    )
+    count = cursor.fetchone()[0]
+    cursor.close()
+    return jsonify({'count': count})
 
 @app.route('/session/decline/<int:sessionID>', methods=['POST'])
 def decline_session(sessionID):
-    """Decline a pending session request"""
     if 'userID' not in session or session.get('role') != 'tutor':
         flash('Only tutors can decline sessions.', 'error')
         return redirect('/login')
     
     try:
         cursor = mysql.connection.cursor()
-        # Change status to 'declined' instead of 'cancelled' to match the enum values
         cursor.execute(
             "UPDATE `session` SET status = 'declined' WHERE sessionID = %s AND tutorID = %s AND status = 'pending'",
             (sessionID, session['userID'])
         )
+        # Get student ID and course code
+        cursor.execute(
+            "SELECT studentID, courseCode FROM `session` WHERE sessionID = %s",
+            (sessionID,)
+        )
+        sess = cursor.fetchone()
+        if sess:
+            student_id = sess[0]
+            course_code = sess[1]
+            cursor.execute(
+                "INSERT INTO notification (userID, message) VALUES (%s, %s)",
+                (student_id, f'Your session request for {course_code} has been declined.')
+            )
         mysql.connection.commit()
         cursor.close()
         flash('Session request declined.', 'success')
@@ -1554,6 +2239,109 @@ def decline_session(sessionID):
         flash(f'Error declining session: {str(e)}', 'error')
     
     return redirect('/tutor-dashboard')
+
+@app.route('/my-sessions')
+def my_sessions():
+    """Tutor's dedicated page to view all sessions and manage group sessions."""
+    if 'userID' not in session or session.get('role') != 'tutor':
+        flash('Please login as a tutor.', 'error')
+        return redirect('/login')
+
+    try:
+        cursor = mysql.connection.cursor()
+
+        # --- 1. All sessions (individual + group) for this tutor ---
+        cursor.execute("""
+            SELECT s.sessionID, s.courseCode, s.scheduledDate, s.scheduledTime,
+                   s.sessionType, s.status, u.fullName as studentName,
+                   s.studentID
+            FROM `session` s
+            JOIN user u ON s.studentID = u.userID
+            WHERE s.tutorID = %s
+            ORDER BY
+                CASE s.status
+                    WHEN 'pending' THEN 1
+                    WHEN 'confirmed' THEN 2
+                    WHEN 'completed' THEN 3
+                    WHEN 'cancelled' THEN 4
+                    WHEN 'declined' THEN 5
+                    ELSE 6
+                END,
+                s.scheduledDate ASC, s.scheduledTime ASC
+        """, (session['userID'],))
+        rows = cursor.fetchall()
+
+        all_sessions = []
+        for row in rows:
+            scheduled_date = row[2]
+            formatted_date = scheduled_date.strftime('%Y-%m-%d') if scheduled_date and hasattr(scheduled_date, 'strftime') else str(scheduled_date) if scheduled_date else 'N/A'
+            scheduled_time = row[3]
+            formatted_time = scheduled_time.strftime('%H:%M') if scheduled_time and hasattr(scheduled_time, 'strftime') else str(scheduled_time) if scheduled_time else 'N/A'
+            all_sessions.append({
+                'sessionID': row[0],
+                'courseCode': row[1],
+                'scheduledDate': formatted_date,
+                'scheduledTime': formatted_time,
+                'sessionType': row[4] if row[4] else 'individual',
+                'status': row[5] if row[5] else 'pending',
+                'studentName': row[6] if row[6] else 'Unknown Student',
+                'studentID': row[7]
+            })
+
+        # --- 2. Group sessions created by this tutor ---
+        cursor.execute("""
+            SELECT s.sessionID, s.courseCode, c.courseName,
+                   s.scheduledDate, s.scheduledTime,
+                   g.maxCapacity, g.enrolledCount, g.pricePerStudent,
+                   g.meetingPlatform, g.accessLink, g.accessLinkUnlocked
+            FROM session s
+            JOIN groupsession g ON s.sessionID = g.groupSessionID
+            JOIN course c ON s.courseCode = c.courseCode
+            WHERE s.tutorID = %s
+            ORDER BY s.scheduledDate DESC, s.scheduledTime DESC
+        """, (session['userID'],))
+        group_rows = cursor.fetchall()
+        cursor.close()
+
+        my_group_sessions = []
+        for row in group_rows:
+            scheduled_date = row[3]
+            formatted_date = scheduled_date.strftime('%Y-%m-%d') if scheduled_date and hasattr(scheduled_date, 'strftime') else str(scheduled_date) if scheduled_date else 'N/A'
+            scheduled_time = row[4]
+            formatted_time = scheduled_time.strftime('%H:%M') if scheduled_time and hasattr(scheduled_time, 'strftime') else str(scheduled_time) if scheduled_time else 'N/A'
+            my_group_sessions.append({
+                'sessionID': row[0],
+                'courseCode': row[1],
+                'courseName': row[2],
+                'scheduledDate': formatted_date,
+                'scheduledTime': formatted_time,
+                'maxCapacity': row[5],
+                'enrolledCount': row[6],
+                'pricePerStudent': float(row[7]) if row[7] else 0.0,
+                'meetingPlatform': row[8],
+                'accessLink': row[9],
+                'accessLinkUnlocked': bool(row[10])
+            })
+
+        # --- 3. Courses the tutor teaches (for the creation form) ---
+        cursor = mysql.connection.cursor()
+        cursor.execute("""
+            SELECT c.courseCode, c.courseName
+            FROM tutorcourse tc
+            JOIN course c ON tc.courseCode = c.courseCode
+            WHERE tc.tutorID = %s
+        """, (session['userID'],))
+        tutor_courses = cursor.fetchall()
+        cursor.close()
+
+        return render_template('my_sessions.html',
+                             fullName=session.get('fullName'),
+                             sessions=all_sessions,
+                             my_group_sessions=my_group_sessions,
+                             tutor_courses=tutor_courses)
+    except Exception as e:
+        flash(f'Error loading sessions: {str(e)}', 'error')
+        return redirect('/tutor-dashboard')
 
 
 @app.route('/upcoming-sessions')

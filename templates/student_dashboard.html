@@ -128,4 +128,22 @@
       </div> -->
     </div>
   </body>
+  <script>
+    function updateStudentNotifCount() {
+        fetch('/api/unread-count')
+            .then(response => response.json())
+            .then(data => {
+                const badge = document.getElementById('student-notif-badge');
+                if (data.count > 0) {
+                    badge.textContent = data.count;
+                    badge.style.display = 'inline';
+                } else {
+                    badge.style.display = 'none';
+                }
+            })
+            .catch(err => console.log('Notification fetch error:', err));
+    }
+    setInterval(updateStudentNotifCount, 10000);
+    updateStudentNotifCount();
+</script>
 </html>

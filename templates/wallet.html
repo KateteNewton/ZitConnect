@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wallet - ZitConnect</title>
+    <link rel="stylesheet" href="/static/css/tutor_dashboard.css">
+    <link rel="stylesheet" href="/static/css/tutor_profile.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <style>
+        .wallet-balance-card {
+            background: #1a3a5c;
+            color: white;
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .wallet-balance-card .balance {
+            font-size: 42px;
+            font-weight: 800;
+        }
+        .wallet-balance-card .label {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+        .withdraw-form {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .withdraw-form input {
+            padding: 10px 16px;
+            border-radius: 8px;
+            border: none;
+            font-size: 16px;
+            width: 180px;
+        }
+        .withdraw-form button {
+            background: #d69e2e;
+            color: #1a3a5c;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .withdraw-form button:hover {
+            background: #e2b84c;
+        }
+        .transaction-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #e5e7eb;
+            align-items: center;
+        }
+        .transaction-item:last-child {
+            border-bottom: none;
+        }
+        .transaction-amount {
+            font-weight: 700;
+            color: #28a745;
+        }
+        .transaction-amount.negative {
+            color: #dc3545;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 25px;
+        }
+        .stats-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+            text-align: center;
+        }
+        .stats-card .number {
+            font-size: 28px;
+            font-weight: 800;
+            color: #1a3a5c;
+        }
+        .stats-card .label {
+            color: #6c757d;
+            font-size: 14px;
+        }
+        @media (max-width: 768px) {
+            .wallet-balance-card {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 16px;
+            }
+            .withdraw-form {
+                width: 100%;
+            }
+            .withdraw-form input {
+                flex: 1;
+                width: 100%;
+            }
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="Dashboard">
+        <!-- Sidebar (same as tutor dashboard) -->
+        <div class="left">
+            <div class="Header">
+                <div class="logo-circle"></div>
+                <h1>ZitConnect</h1>
+            </div>
+            <a href="/tutor-dashboard" class="menu-item" style="text-decoration: none; color: inherit;">
+                <i class="bi bi-speedometer2 menu-icon"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="/my-sessions" class="menu-item" style="text-decoration: none; color: inherit;">
+                <i class="bi bi-calendar-check menu-icon"></i>
+                <span>My Sessions</span>
+            </a>
+            <a href="/wallet" class="menu-item active-menu" style="text-decoration: none; color: inherit;">
+                <i class="bi bi-currency-dollar menu-icon"></i>
+                <span>Earnings</span>
+            </a>
+            <a href="/manage-courses" class="menu-item" style="text-decoration: none; color: inherit;">
+                <i class="bi bi-journal-bookmark menu-icon"></i>
+                <span>Course Management</span>
+            </a>
+            <a href="/tutor-profile" class="menu-item" style="text-decoration: none; color: inherit;">
+                <i class="bi bi-person-circle menu-icon"></i>
+                <span>Profile</span>
+            </a>
+            <a href="/logout" class="menu-item logout-item" style="text-decoration: none; color: inherit;">
+                <i class="bi bi-box-arrow-right menu-icon"></i>
+                <span>Logout</span>
+            </a>
+        </div>
+
+        <!-- Main Content -->
+        <div class="right">
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <div class="Welcome_part">
+                <h2>My Wallet</h2>
+                <p>Manage your earnings and withdrawals.</p>
+            </div>
+
+            <!-- Balance Card -->
+            <div class="wallet-balance-card">
+                <div>
+                    <div class="label">Available Balance</div>
+                    <div class="balance">K{{ "%.2f"|format(availableBalance) }}</div>
+                </div>
+                <div>
+                    <form action="/withdraw" method="post" class="withdraw-form">
+                        <input type="number" name="amount" step="0.01" min="0.01" placeholder="Amount" required>
+                        <button type="submit"><i class="bi bi-arrow-up-right"></i> Withdraw</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="stats-grid">
+                <div class="stats-card">
+                    <div class="number">K{{ "%.2f"|format(totalWithdrawn) }}</div>
+                    <div class="label">Total Withdrawn</div>
+                </div>
+                <div class="stats-card">
+                    <div class="number">{{ transactions|length }}</div>
+                    <div class="label">Transactions</div>
+                </div>
+            </div>
+
+            <!-- Recent Transactions -->
+            <div class="bottom">
+                <h3><i class="bi bi-clock-history"></i> Recent Transactions</h3>
+                {% if transactions and transactions|length > 0 %}
+                    {% for txn in transactions %}
+                        <div class="transaction-item">
+                            <div>
+                                <strong>{{ txn.course }}</strong>
+                                <span style="color: #6c757d; font-size: 13px; display: block;">{{ txn.date }}</span>
+                            </div>
+                            <div>
+                                <span class="transaction-amount">+K{{ "%.2f"|format(txn.earned) }}</span>
+                                <span style="color: #6c757d; font-size: 13px; margin-left: 12px;">(fee K{{ "%.2f"|format(txn.amount - txn.earned) }})</span>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state" style="margin: 20px 0;">
+                        <i class="bi bi-inbox"></i>
+                        <p>No transactions yet</p>
+                        <small>Earnings will appear here after students pay for group sessions.</small>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</body>
+</html>
