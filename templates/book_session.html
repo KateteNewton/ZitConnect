@@ -89,7 +89,7 @@
             <ul class="sidebar-menu">
                 <li><a href="/student-dashboard"><i class="fas fa-home"></i><span>Home</span></a></li>
                 <li><a href="/upcoming-sessions"><i class="fas fa-calendar-check"></i><span>Sessions</span></a></li>
-                <li><a href="#saved"><i class="fas fa-bookmark"></i><span>Saved</span></a></li>
+                <li><a href="/student-profile"><i class="fas fa-user-circle"></i><span>Profile</span></a></li>
                 <li><a href="/logout"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a></li>
             </ul>
         </div>
@@ -196,6 +196,41 @@
         const groupDetails = document.getElementById('groupDetails');
         const payBtn = document.getElementById('payNowBtn');
         const bookingForm = document.getElementById('bookingForm');
+        // Fetch available time slots when date changes
+const dateInput = document.getElementById('scheduledDate');
+const timeSlotSelect = document.getElementById('timeSlot');
+
+dateInput.addEventListener('change', function() {
+    const date = this.value;
+    const tutorId = document.querySelector('input[name="tutorID"]').value;
+    if (!date || !tutorId) return;
+
+    // Clear current options
+    timeSlotSelect.innerHTML = '<option value="">Loading...</option>';
+
+    fetch(`/api/availability/${tutorId}?date=${date}`)
+        .then(response => response.json())
+        .then(data => {
+            timeSlotSelect.innerHTML = '<option value="">Select a time</option>';
+            if (data.slots && data.slots.length > 0) {
+                data.slots.forEach(slot => {
+                    const option = document.createElement('option');
+                    option.value = slot;
+                    option.textContent = slot;
+                    timeSlotSelect.appendChild(option);
+                });
+            } else {
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = 'No available slots';
+                timeSlotSelect.appendChild(option);
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching slots:', error);
+            timeSlotSelect.innerHTML = '<option value="">Error loading slots</option>';
+        });
+});
 
         typeRadios.forEach(radio => {
             radio.addEventListener('change', function() {

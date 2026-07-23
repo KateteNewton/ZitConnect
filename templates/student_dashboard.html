@@ -12,12 +12,14 @@
 
     <div class="page-wrapper">
       <div class="sidebar">
-        <div class="sidebar-profile">
-          <div class="sidebar-avatar">
-            <i class="fas fa-user"></i>
-          </div>
-          <div class="sidebar-name">{{ fullName or 'Student' }}</div>
-        </div>
+          <div class="sidebar-profile">
+    <div class="sidebar-avatar">
+        <i class="fas fa-user"></i>
+    </div>
+    <a href="/student-profile" style="text-decoration: none; color: inherit;">
+        <div class="sidebar-name">{{ fullName or 'Student' }}</div>
+    </a>
+</div>
         <ul class="sidebar-menu">
           <li>
             <a href="/student-dashboard">
@@ -32,9 +34,9 @@
             </a>
           </li>
           <li>
-            <a href="#saved">
-              <i class="fas fa-bookmark"></i>
-              <span>Saved</span>
+            <a href="/student-profile">
+              <i class="fas fa-user-circle"></i>
+              <span>Profile</span>
             </a>
           </li>
           <li>

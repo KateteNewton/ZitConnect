@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Course Management - ZitConnect</title>
+    <link rel="stylesheet" href="/static/css/tutor_dashboard.css">
+    <link rel="stylesheet" href="/static/css/tutor_profile.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <style>
+        .course-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin: 16px 0;
+        }
+        .course-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            transition: background 0.2s;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .course-item:hover {
+            background: #f8fafc;
+        }
+        .course-item .info {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .course-item .code {
+            font-weight: 700;
+            color: #1a3a5c;
+        }
+        .course-item .name {
+            color: #333;
+        }
+        .course-item .grade {
+            font-size: 13px;
+            color: #6c757d;
+        }
+        .course-item .price-input {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .course-item .price-input input {
+            width: 100px;
+            padding: 6px 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .btn-remove {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: background 0.2s;
+        }
+        .btn-remove:hover {
+            background: #bd2130;
+        }
+        .btn-update-price {
+            background: #17a2b8;
+            color: white;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: background 0.2s;
+        }
+        .btn-update-price:hover {
+            background: #138496;
+        }
+        .btn-add {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+        .btn-add:hover {
+            background: #1e7e34;
+        }
+        .add-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 24px;
+            border: 1px solid #e5e7eb;
+        }
+        .add-section .form-row {
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+            flex-wrap: wrap;
+        }
+        .add-section select {
+            flex: 1;
+            padding: 10px 14px;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+            font-size: 14px;
+            min-width: 200px;
+        }
+        .add-section select:focus {
+            border-color: #49709c;
+            outline: none;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #6c757d;
+        }
+        .empty-state i {
+            font-size: 48px;
+            color: #d1d5db;
+            margin-bottom: 12px;
+        }
+        @media (max-width: 600px) {
+            .course-item {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+            }
+            .course-item .info {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 4px;
+            }
+            .course-item .price-input {
+                flex-wrap: wrap;
+            }
+            .add-section .form-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .add-section select {
+                min-width: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="Dashboard">
+        <!-- Sidebar -->
+        <div class="left">
+            <div class="Header">
+                <div class="logo-circle"></div>
+                <h1>ZitConnect</h1>
+            </div>
+            <a href="/tutor-dashboard" class="menu-item" style="text-decoration: none; color: inherit;">
+                <i class="bi bi-speedometer2 menu-icon"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="/my-sessions" class="menu-item" style="text-decoration: none; color: inherit;">
+                <i class="bi bi-calendar-check menu-icon"></i>
+                <span>My Sessions</span>
+            </a>
+            <a href="/wallet" class="menu-item" style="text-decoration: none; color: inherit;">
+                <i class="bi bi-currency-dollar menu-icon"></i>
+                <span>Earnings</span>
+            </a>
+            <a href="/manage-courses" class="menu-item active-menu" style="text-decoration: none; color: inherit;">
+                <i class="bi bi-journal-bookmark menu-icon"></i>
+                <span>Course Management</span>
+            </a>
+            <a href="/tutor-profile" class="menu-item" style="text-decoration: none; color: inherit;">
+                <i class="bi bi-person-circle menu-icon"></i>
+                <span>Profile</span>
+            </a>
+            <a href="/logout" class="menu-item logout-item" style="text-decoration: none; color: inherit;">
+                <i class="bi bi-box-arrow-right menu-icon"></i>
+                <span>Logout</span>
+            </a>
+        </div>
+
+        <!-- Main Content -->
+        <div class="right">
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <div class="Welcome_part">
+                <h2>Course Management</h2>
+                <p>Manage the courses you offer and set your price for individual sessions.</p>
+            </div>
+
+            <!-- Current Courses -->
+            <div class="bottom">
+                <h3><i class="bi bi-book"></i> Your Courses <span class="badge-count">{{ current_courses|length }}</span></h3>
+                {% if current_courses and current_courses|length > 0 %}
+                    <div class="course-list">
+                        {% for course in current_courses %}
+                            <div class="course-item">
+                                <div class="info">
+                                    <span class="code">{{ course[0] }}</span>
+                                    <span class="name">{{ course[1] }}</span>
+                                    <span class="grade">Grade: {{ course[2] or 'N/A' }}</span>
+                                </div>
+                                <div class="price-input">
+                                    <form method="post" style="display: flex; align-items: center; gap: 8px;">
+                                        <input type="hidden" name="action" value="update_price">
+                                        <input type="hidden" name="courseCode" value="{{ course[0] }}">
+                                        <label style="font-size: 13px; color: #333;">K</label>
+                                        <input type="number" step="0.01" min="0" name="pricePerSession" value="{{ course[3] or 0.00 }}" style="width: 90px;">
+                                        <button type="submit" class="btn-update-price">
+                                            <i class="bi bi-pencil"></i> Update
+                                        </button>
+                                    </form>
+                                    <form method="post" style="display: inline;">
+                                        <input type="hidden" name="action" value="remove">
+                                        <input type="hidden" name="courseCode" value="{{ course[0] }}">
+                                        <button type="submit" class="btn-remove">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="empty-state">
+                        <i class="bi bi-journal-bookmark"></i>
+                        <p>You are not offering any courses yet.</p>
+                        <small>Add courses below to start tutoring.</small>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Add New Course -->
+            <div class="add-section">
+                <h4><i class="bi bi-plus-circle"></i> Add a New Course</h4>
+                <form method="post" class="form-row">
+                    <input type="hidden" name="action" value="add">
+                    <select name="courseCode" required>
+                        <option value="">Select a course...</option>
+                        {% for course in available_courses %}
+                            <option value="{{ course[0] }}">{{ course[0] }} – {{ course[1] }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="btn-add">
+                        <i class="bi bi-plus-lg"></i> Add Course
+                    </button>
+                </form>
+                {% if available_courses|length == 0 %}
+                    <p style="color: #6c757d; font-size: 14px; margin-top: 8px;">
+                        <i class="bi bi-info-circle"></i> You are already offering all available courses.
+                    </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</body>
+</html>

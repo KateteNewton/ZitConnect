@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>My Profile - ZitConnect</title>
+    <link rel="stylesheet" href="/static/css/student_dashbord.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        .profile-card {
+            background: white;
+            border-radius: 12px;
+            padding: 28px;
+            border: 1px solid #e5e7eb;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+        .profile-pic-section {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            margin-bottom: 24px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .profile-pic {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            overflow: hidden;
+            background: #ddd;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        .profile-pic img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .profile-pic i {
+            font-size: 48px;
+            color: #888;
+        }
+        .pic-upload-btn {
+            background: #49709c;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            transition: background 0.2s;
+        }
+        .pic-upload-btn:hover {
+            background: #3d5a7c;
+        }
+        .profile-form .form-group {
+            margin-bottom: 18px;
+        }
+        .profile-form label {
+            display: block;
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 4px;
+            color: #000;
+        }
+        .profile-form input {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+        .profile-form input:focus {
+            border-color: #49709c;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(73,112,156,0.1);
+        }
+        .profile-form input:disabled {
+            background: #f0f2f5;
+            color: #65676b;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        .btn-submit {
+            background: #49709c;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            width: 100%;
+        }
+        .btn-submit:hover {
+            background: #3d5a7c;
+        }
+        .alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+        .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .alert-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .alert-warning { background: #fff3cd; color: #856404; border: 1px solid #ffc107; }
+        @media (max-width: 600px) {
+            .form-row { grid-template-columns: 1fr; }
+            .profile-pic-section { flex-direction: column; align-items: center; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+    {% include 'student_nav.html' %}
+
+    <div class="page-wrapper">
+        <div class="sidebar">
+            <div class="sidebar-profile">
+                <div class="sidebar-avatar">
+                    <i class="fas fa-user"></i>
+                </div>
+                <a href="/student-profile" style="text-decoration: none; color: inherit;">
+                    <div class="sidebar-name">{{ fullName or 'Student' }}</div>
+                </a>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="/student-dashboard"><i class="fas fa-home"></i><span>Home</span></a></li>
+                <li><a href="/upcoming-sessions"><i class="fas fa-calendar-check"></i><span>Sessions</span></a></li>
+                <li><a href="/student-profile" class="active"><i class="fas fa-user-circle"></i><span>Profile</span></a></li>
+                <li><a href="/logout"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a></li>
+            </ul>
+        </div>
+
+        <div class="content">
+            <div class="content-wrapper">
+                <div class="profile-card">
+                    <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 16px;">My Profile</h2>
+
+                    <!-- Flash Messages -->
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }}">{{ message }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+
+                    <!-- Profile Picture -->
+                    <div class="profile-pic-section">
+                        <div class="profile-pic" id="profilePicContainer">
+                            {% if profilePicture %}
+                                <img src="/static/{{ profilePicture }}" alt="Profile Picture" id="profilePreview">
+                            {% else %}
+                                <i class="fas fa-user" id="profilePreview"></i>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <form method="POST" enctype="multipart/form-data" id="profilePicForm">
+                                <input type="hidden" name="action" value="upload_profile_pic">
+                                <input type="file" id="profilePicInput" name="profilePic" accept=".jpg,.jpeg,.png" style="display: none;">
+                                <button type="button" class="pic-upload-btn" onclick="document.getElementById('profilePicInput').click()">
+                                    <i class="fas fa-camera"></i> Change Photo
+                                </button>
+                                <p style="font-size: 12px; color: #65676b; margin-top: 8px;">JPG, JPEG or PNG (max 5MB)</p>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Update Info Form -->
+                    <form method="POST" class="profile-form">
+                        <input type="hidden" name="action" value="update_info">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="fullName">Full Name</label>
+                                <input type="text" id="fullName" name="fullName" value="{{ fullName }}" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="username">Username</label>
+                                <input type="text" id="username" name="username" value="{{ userName }}" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="email">Email (View Only)</label>
+                            <input type="email" id="email" value="{{ email }}" disabled>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="password">New Password</label>
+                                <input type="password" id="password" name="password" placeholder="Leave blank to keep current">
+                            </div>
+                            <div class="form-group">
+                                <label for="confirm_password">Confirm Password</label>
+                                <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm new password">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn-submit">
+                            <i class="fas fa-save"></i> Save Changes
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Profile picture preview and auto-submit
+        document.getElementById('profilePicInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                // Validate type
+                const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+                if (!validTypes.includes(file.type)) {
+                    alert('Please upload a valid image (JPG or PNG)');
+                    return;
+                }
+                // Show preview
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const preview = document.getElementById('profilePreview');
+                    // If it's an icon, replace with img
+                    if (preview.tagName === 'I') {
+                        const img = document.createElement('img');
+                        img.id = 'profilePreview';
+                        img.src = event.target.result;
+                        img.alt = 'Profile Picture';
+                        img.style.width = '100%';
+                        img.style.height = '100%';
+                        img.style.objectFit = 'cover';
+                        preview.replaceWith(img);
+                    } else {
+                        preview.src = event.target.result;
+                    }
+                };
+                reader.readAsDataURL(file);
+                // Auto-submit form
+                document.getElementById('profilePicForm').submit();
+            }
+        });
+    </script>
+</body>
+</html>

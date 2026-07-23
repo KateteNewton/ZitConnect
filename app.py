@@ -1,12 +1,16 @@
+import os
+import json
+import requests
+import re
+import uuid
 from flask import Flask, jsonify, render_template, request, redirect, session, flash, url_for
 from flask_mysqldb import MySQL
 from datetime import timedelta, datetime, date
 from werkzeug.utils import secure_filename
 from decimal import Decimal
-import os
-import json
-import requests
-import re
+from dotenv import load_dotenv
+load_dotenv()
+
 
 app = Flask(__name__)
 
@@ -22,11 +26,33 @@ app.config['MYSQL_DB'] = 'zitconnect_db'
 
 mysql = MySQL(app)
 
+# Lenco Configuration
+LENCO_BASE_URL = "https://api.lenco.co/access/v2/"
+#LENCO_BASE_URL = os.getenv("LENCO_BASE_URL", "https://api.lenco.co/access/v2/")
+LENCO_SECRET_KEY = os.getenv("LENCO_SECRET_KEY")
+LENCO_PUBLIC_KEY = os.getenv("LENCO_PUBLIC_KEY")
+LENCO_SIGNATURE = os.getenv("LENCO_SIGNATURE")
+
+# Payment simulation mode – set to False when real credentials work
+SIMULATE_PAYMENT = False
+
 # ============ Helper Functions ============
 def validate_email(email):
     """Validate email format"""
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     return re.match(pattern, email) is not None
+
+def _redirect_on_error():
+    """Redirect users to the appropriate dashboard based on their role."""
+    if 'userID' in session:
+        role = session.get('role')
+        if role == 'student':
+            return redirect('/student-dashboard')
+        elif role == 'tutor':
+            return redirect('/tutor-dashboard')
+        elif role == 'admin':
+            return redirect('/admin')
+    return redirect('/login')
 
 def get_programs():
     """Fetch all programs from database"""
@@ -64,6 +90,11 @@ def allowed_file(filename):
 @app.route('/')
 def home():
     return render_template('register1.html')
+
+@app.route('/favicon.ico')
+def favicon():
+    # Return a 204 No Content so the browser doesn't trigger a 404
+    return '', 204
 
 @app.route('/register1')
 def register1_redirect():
@@ -817,6 +848,114 @@ def student_dashboard():
 
     return render_template('student_dashboard.html', fullName=session.get('fullName'), sessions=sessions, tutors=tutors)
 
+@app.route('/student-profile', methods=['GET', 'POST'])
+def student_profile():
+    if 'userID' not in session or session.get('role') != 'student':
+        flash('Please login as a student.', 'error')
+        return redirect('/login')
+
+    cursor = mysql.connection.cursor()
+    user_id = session['userID']
+
+    if request.method == 'POST':
+        action = request.form.get('action', 'update_info')
+
+        if action == 'update_info':
+            full_name = request.form.get('fullName', '').strip()
+            username = request.form.get('username', '').strip()
+            password = request.form.get('password', '')
+            confirm_password = request.form.get('confirm_password', '')
+
+            if not full_name or not username:
+                flash('Full name and username are required.', 'error')
+                return redirect('/student-profile')
+
+            # Check if username already exists (excluding current user)
+            cursor.execute(
+                "SELECT userID FROM user WHERE userName = %s AND userID != %s",
+                (username, user_id)
+            )
+            if cursor.fetchone():
+                flash('Username already taken.', 'error')
+                return redirect('/student-profile')
+
+            # Update user info
+            if password:
+                if password != confirm_password:
+                    flash('Passwords do not match.', 'error')
+                    return redirect('/student-profile')
+                if len(password) < 6:
+                    flash('Password must be at least 6 characters.', 'error')
+                    return redirect('/student-profile')
+                cursor.execute(
+                    "UPDATE user SET fullName = %s, userName = %s, password = %s WHERE userID = %s",
+                    (full_name, username, password, user_id)
+                )
+            else:
+                cursor.execute(
+                    "UPDATE user SET fullName = %s, userName = %s WHERE userID = %s",
+                    (full_name, username, user_id)
+                )
+
+            mysql.connection.commit()
+            session['fullName'] = full_name  # update session
+            flash('Profile updated successfully.', 'success')
+            return redirect('/student-profile')
+
+        elif action == 'upload_profile_pic':
+            profile_pic = request.files.get('profilePic')
+            if not profile_pic or profile_pic.filename == '':
+                flash('Please choose an image to upload.', 'error')
+                return redirect('/student-profile')
+
+            # Validate file type
+            allowed = {'jpg', 'jpeg', 'png'}
+            if '.' not in profile_pic.filename or profile_pic.filename.rsplit('.', 1)[1].lower() not in allowed:
+                flash('Only JPG, JPEG, and PNG images are allowed.', 'error')
+                return redirect('/student-profile')
+
+            # Save file
+            filename = secure_filename(f"profile_{user_id}_{profile_pic.filename}")
+            upload_folder = os.path.join(app.root_path, 'static', 'uploads', 'profile_pics')
+            os.makedirs(upload_folder, exist_ok=True)
+
+            # Avoid overwriting
+            base, ext = os.path.splitext(filename)
+            counter = 1
+            save_path = os.path.join(upload_folder, filename)
+            while os.path.exists(save_path):
+                filename = f"{base}_{counter}{ext}"
+                save_path = os.path.join(upload_folder, filename)
+                counter += 1
+
+            profile_pic.save(save_path)
+            relative_path = f"uploads/profile_pics/{filename}"
+
+            cursor.execute(
+                "UPDATE user SET profilePicture = %s WHERE userID = %s",
+                (relative_path, user_id)
+            )
+            mysql.connection.commit()
+            flash('Profile picture updated successfully.', 'success')
+            return redirect('/student-profile')
+
+    # GET – fetch current user data
+    cursor.execute(
+        "SELECT fullName, userName, email, profilePicture FROM user WHERE userID = %s",
+        (user_id,)
+    )
+    user = cursor.fetchone()
+    cursor.close()
+
+    if not user:
+        flash('User not found.', 'error')
+        return redirect('/student-dashboard')
+
+    return render_template('student_profile.html',
+                           fullName=user[0],
+                           userName=user[1],
+                           email=user[2],
+                           profilePicture=user[3])
 
 @app.route('/tutor/<int:tutorID>')
 def view_tutor(tutorID):
@@ -951,38 +1090,88 @@ def logout():
 
 @app.route('/manage-courses', methods=['GET', 'POST'])
 def manage_courses():
-    """Allow tutors to add/manage courses they can tutor"""
     if 'userID' not in session or session.get('role') != 'tutor':
-        flash('Please login as a tutor to manage courses', 'error')
+        flash('Please login as a tutor to manage courses.', 'error')
         return redirect('/login')
-    
-    try:
-        cursor = mysql.connection.cursor()
-        
-        # Get tutor's current courses
-        cursor.execute(
-            "SELECT tc.courseCode, c.courseName, tc.gradeObtained "
-            "FROM tutorcourse tc "
-            "JOIN course c ON tc.courseCode = c.courseCode "
-            "WHERE tc.tutorID = %s",
-            (session['userID'],)
+
+    tutor_id = session['userID']
+    cursor = mysql.connection.cursor()
+
+    if request.method == 'POST':
+        action = request.form.get('action')
+        course_code = request.form.get('courseCode', '').strip()
+
+        if action == 'add':
+            if not course_code:
+                flash('Please select a course to add.', 'error')
+            else:
+                cursor.execute(
+                    "SELECT tutorCourseID FROM tutorcourse WHERE tutorID = %s AND courseCode = %s",
+                    (tutor_id, course_code)
+                )
+                if cursor.fetchone():
+                    flash('You already offer this course.', 'warning')
+                else:
+                    cursor.execute(
+                        "INSERT INTO tutorcourse (tutorID, courseCode, gradeObtained, pricePerSession) VALUES (%s, %s, 'pending', 0.00)",
+                        (tutor_id, course_code)
+                    )
+                    mysql.connection.commit()
+                    flash('Course added successfully. Set a price for individual sessions.', 'success')
+
+        elif action == 'remove':
+            if not course_code:
+                flash('Invalid course.', 'error')
+            else:
+                cursor.execute(
+                    "DELETE FROM tutorcourse WHERE tutorID = %s AND courseCode = %s",
+                    (tutor_id, course_code)
+                )
+                mysql.connection.commit()
+                flash('Course removed successfully.', 'success')
+
+        elif action == 'update_price':
+            course_code = request.form.get('courseCode', '').strip()
+            price = request.form.get('pricePerSession', type=float)
+            if not course_code or price is None or price < 0:
+                flash('Please enter a valid price (0 or more).', 'error')
+            else:
+                cursor.execute(
+                    "UPDATE tutorcourse SET pricePerSession = %s WHERE tutorID = %s AND courseCode = %s",
+                    (price, tutor_id, course_code)
+                )
+                mysql.connection.commit()
+                flash('Price updated successfully.', 'success')
+
+        return redirect('/manage-courses')
+
+    # GET: fetch current courses with price
+    cursor.execute("""
+        SELECT tc.courseCode, c.courseName, tc.gradeObtained, tc.pricePerSession
+        FROM tutorcourse tc
+        JOIN course c ON tc.courseCode = c.courseCode
+        WHERE tc.tutorID = %s
+        ORDER BY c.courseCode
+    """, (tutor_id,))
+    current_courses = cursor.fetchall()
+
+    # All available courses (not yet offered)
+    cursor.execute("""
+        SELECT courseCode, courseName
+        FROM course
+        WHERE courseCode NOT IN (
+            SELECT courseCode FROM tutorcourse WHERE tutorID = %s
         )
-        current_courses = cursor.fetchall()
-        
-        # Get available courses (all courses from database)
-        cursor.execute(
-            "SELECT courseCode, courseName FROM course ORDER BY courseCode"
-        )
-        all_courses = cursor.fetchall()
-        
-        cursor.close()
-        
-        return render_template('manage_courses.html', 
-                             current_courses=current_courses,
-                             all_courses=all_courses)
-    except Exception as e:
-        flash(f'Error loading courses: {str(e)}', 'error')
-        return redirect('/tutor-dashboard')
+        ORDER BY courseCode
+    """, (tutor_id,))
+    available_courses = cursor.fetchall()
+
+    cursor.close()
+
+    return render_template('manage_courses.html',
+                           fullName=session.get('fullName'),
+                           current_courses=current_courses,
+                           available_courses=available_courses)
 
 @app.route('/search', methods=['GET'])
 def search():
@@ -1379,6 +1568,47 @@ def admin_profile():
                              fullName=session.get('fullName'),
                              admin_email=session.get('email', 'admin@zitconnect.com'))
 
+@app.route('/session/complete/<int:sessionID>', methods=['POST'])
+def complete_session(sessionID):
+    """Tutor marks a confirmed session as completed."""
+    if 'userID' not in session or session.get('role') != 'tutor':
+        flash('Only tutors can complete sessions.', 'error')
+        return redirect('/login')
+
+    try:
+        cursor = mysql.connection.cursor()
+        # Update session status to 'completed'
+        cursor.execute(
+            "UPDATE `session` SET status = 'completed' WHERE sessionID = %s AND tutorID = %s AND status = 'confirmed'",
+            (sessionID, session['userID'])
+        )
+        if cursor.rowcount == 0:
+            flash('Session not found or not confirmed.', 'error')
+            return redirect('/tutor-dashboard')
+
+        # Get student ID and course code for notification
+        cursor.execute(
+            "SELECT studentID, courseCode FROM `session` WHERE sessionID = %s",
+            (sessionID,)
+        )
+        sess = cursor.fetchone()
+        if sess:
+            student_id = sess[0]
+            course_code = sess[1]
+            # Notify student that session is completed and they can rate
+            cursor.execute(
+                "INSERT INTO notification (userID, message) VALUES (%s, %s)",
+                (student_id, f'Your session for {course_code} has been marked as completed. You can now rate the tutor.')
+            )
+        mysql.connection.commit()
+        cursor.close()
+        flash('Session marked as completed. Student can now rate.', 'success')
+    except Exception as e:
+        mysql.connection.rollback()
+        flash(f'Error completing session: {str(e)}', 'error')
+
+    return redirect('/tutor-dashboard')
+
 
 @app.route('/admin/approve-tutor/<int:tutorID>', methods=['POST'])
 def admin_approve_tutor(tutorID):
@@ -1555,6 +1785,33 @@ def admin_tutor_details(tutorID):
     except Exception as e:
         print(f"Error in admin_tutor_details: {e}")
         return jsonify({'error': str(e)}), 500
+    
+
+@app.route('/availability', methods=['GET'])
+def availability_page():
+    if 'userID' not in session or session.get('role') != 'tutor':
+        flash('Please login as a tutor.', 'error')
+        return redirect('/login')
+
+    tutor_id = session['userID']
+    cursor = mysql.connection.cursor()
+    cursor.execute(
+        "SELECT dayOfWeek, timeSlot FROM availability WHERE tutorID = %s",
+        (tutor_id,)
+    )
+    slots = cursor.fetchall()
+    cursor.close()
+
+    # Build a dict for easy frontend pre-selection
+    selected = {}
+    for day, time in slots:
+        if day not in selected:
+            selected[day] = []
+        selected[day].append(time)
+
+    return render_template('availability.html',
+                           fullName=session.get('fullName'),
+                           selected=selected)
 
 @app.route('/book-session', methods=['GET', 'POST'])
 def book_session():
@@ -1844,10 +2101,14 @@ def join_session(groupSessionID):
         mysql.connection.commit()
         cursor.close()
 
+        print(f"Payment created with ID: {payment_id}")  # Debug
+
         # Redirect to payment page
-        return redirect(url_for('payment_page', paymentID=payment_id))
+        return redirect(f'/payment/{payment_id}')
+
     except Exception as e:
         mysql.connection.rollback()
+        print(f" Error in join_session: {e}")  # Debug
         flash(f'Error joining session: {str(e)}', 'error')
         return redirect('/group-sessions')
     
@@ -1858,128 +2119,312 @@ def payment_page(paymentID):
         return redirect('/login')
 
     cursor = mysql.connection.cursor()
-    # Fetch payment details with session and tutor info
+    # Single-line string to avoid stray % characters
     cursor.execute("""
         SELECT p.paymentID, p.amount, p.paymentStatus, p.transactionID,
-               s.sessionID, s.courseCode, s.scheduledDate, s.scheduledTime,
+               s.sessionID, s.courseCode, c.courseName, s.scheduledDate, s.scheduledTime,
                u.fullName AS tutorName, g.meetingPlatform, g.accessLink,
-               g.groupSessionID, g.pricePerStudent
+               g.groupSessionID, g.pricePerStudent, g.accessLinkUnlocked
         FROM payment p
         JOIN groupsession g ON p.groupSessionID = g.groupSessionID
         JOIN session s ON g.groupSessionID = s.sessionID
+        JOIN course c ON s.courseCode = c.courseCode
         JOIN tutor t ON s.tutorID = t.tutorID
         JOIN user u ON t.tutorID = u.userID
         WHERE p.paymentID = %s AND p.studentID = %s
     """, (paymentID, session['userID']))
-    payment = cursor.fetchone()
+    row = cursor.fetchone()
     cursor.close()
 
-    if not payment:
+    if not row:
         flash('Payment record not found.', 'error')
         return redirect('/student-dashboard')
+    
+    response = requests.post(url, json=payload, headers=headers, timeout=30)
+    print("STATUS CODE:", response.status_code)
+    print("RAW RESPONSE:", repr(response.text))
+    result = response.json()
 
-    # If payment already successful, redirect to confirmation
-    if payment[2] == 'successful':
-        return redirect(url_for('payment_confirmation', paymentID=paymentID))
+    payment = {
+        'paymentID': row[0],
+        'amount': row[1],
+        'paymentStatus': row[2],
+        'transactionID': row[3],
+        'sessionID': row[4],
+        'courseCode': row[5],
+        'courseName': row[6],
+        'scheduledDate': row[7],
+        'scheduledTime': row[8],
+        'tutorName': row[9],
+        'meetingPlatform': row[10],
+        'accessLink': row[11],
+        'groupSessionID': row[12],
+        'pricePerStudent': row[13],
+        'accessLinkUnlocked': row[14]
+    }
+
+    # If already successful, show the link directly
+    if payment['paymentStatus'] == 'successful':
+        return render_template('group_payment.html', payment=payment, payment_success=True)
 
     if request.method == 'POST':
-        # Simulate Lenco payment processing – always succeeds for demo
+        # --- SIMULATION MODE (bypass Lenco) ---
+        if SIMULATE_PAYMENT:
+            try:
+                cursor = mysql.connection.cursor()
+                # Mark payment successful
+                cursor.execute(
+                    "UPDATE payment SET paymentStatus = 'successful', transactionID = %s WHERE paymentID = %s",
+                    (f"SIM-{uuid.uuid4().hex[:8].upper()}", paymentID)
+                )
+                # Unlock session and increment enrollment
+                cursor.execute("""
+                    UPDATE groupsession 
+                    SET enrolledCount = enrolledCount + 1, accessLinkUnlocked = 1 
+                    WHERE groupSessionID = %s
+                """, (payment['groupSessionID'],))
+                mysql.connection.commit()
+                cursor.close()
+
+                flash('Payment successful! You can now join the session.', 'success')
+                return render_template('group_payment.html', payment=payment, payment_success=True)
+            except Exception as e:
+                flash(f'Simulation error: {str(e)}', 'error')
+                return render_template('group_payment.html', payment=payment)
+
+        if request.method == 'POST':
+    # --- REAL PAYMENT (SIMULATE_PAYMENT is False) ---
+            phone_number = request.form.get('phone_number', '').strip()
+            operator = request.form.get('operator', '').strip()
+
+    if not phone_number or not operator:
+        flash('Please enter your mobile money number and select your network.', 'error')
+        return render_template('group_payment.html', payment=payment)
+
+    if not re.match(r'^(09|07)\d{8}$', phone_number):
+        flash('Please enter a valid Zambian mobile number (e.g., 0977123456).', 'error')
+        return render_template('group_payment.html', payment=payment)
+
+    try:
+        reference = f"ZIT-{uuid.uuid4().hex[:8].upper()}"
+        url = f"{LENCO_BASE_URL}collections/mobile-money"
+
+        # Headers – only what's required
+        headers = {
+            'Authorization': f'Bearer {LENCO_SECRET_KEY}',
+            'accept': 'application/json',
+            'content-type': 'application/json'
+        }
+
+        payload = {
+            "reference": reference,
+            "amount": float(payment['amount']),
+            "currency": "ZMW",
+            "operator": operator,          # 'airtel', 'mtn', or 'zamtel'
+            "phone": phone_number,
+            "country": "zm",
+            "bearer": "customer"
+        }
+
+        # --- Debug output ---
+        print("\n🔍 Sending to Lenco:")
+        print(f"   URL: {url}")
+        print(f"   Headers: {headers}")
+        print(f"   Payload: {payload}")
+
+        # Send request
+        response = requests.post(url, json=payload, headers=headers, timeout=30)
+
+        # --- Debug the raw response ---
+        print(f"\n📡 Response status: {response.status_code}")
+        print(f"📡 Response headers: {response.headers}")
+        print(f"📡 Raw response (first 1000 chars):\n{response.text[:1000]}")
+
+        # Try to parse JSON
         try:
-            import uuid
-            transaction_id = str(uuid.uuid4())
-
-            cursor = mysql.connection.cursor()
-            # Update payment status
-            cursor.execute(
-                "UPDATE payment SET paymentStatus = 'successful', transactionID = %s WHERE paymentID = %s",
-                (transaction_id, paymentID)
-            )
-            # Increment enrolledCount and unlock access link
-            group_session_id = payment[11]
-            cursor.execute(
-                "UPDATE groupsession SET enrolledCount = enrolledCount + 1, accessLinkUnlocked = 1 WHERE groupSessionID = %s",
-                (group_session_id,)
-            )
-
-            # Get tutor ID from the session table
-            cursor.execute(
-                "SELECT tutorID FROM session WHERE sessionID = %s",
-                (group_session_id,)
-            )
-            tutor_row = cursor.fetchone()
-            if not tutor_row:
-                flash('Tutor not found for this session.', 'error')
-                mysql.connection.rollback()
-                return redirect('/student-dashboard')
-
-            tutor_id = tutor_row[0]
-            amount = float(payment[1])
-            commission = amount * 0.10  # 10% platform fee
-            tutor_credit = amount - commission
-
-            # Credit tutor wallet (create if not exists)
-            cursor.execute("SELECT walletID FROM wallet WHERE tutorID = %s", (tutor_id,))
-            wallet = cursor.fetchone()
-            if wallet:
-                cursor.execute(
-                    "UPDATE wallet SET availableBalance = availableBalance + %s WHERE tutorID = %s",
-                    (tutor_credit, tutor_id)
-                )
-            else:
-                cursor.execute(
-                    "INSERT INTO wallet (tutorID, availableBalance, totalWithdrawn) VALUES (%s, %s, 0)",
-                    (tutor_id, tutor_credit)
-                )
-
-            # Create notifications
-            cursor.execute(
-                "INSERT INTO notification (userID, message) VALUES (%s, %s)",
-                (session['userID'], f'Your payment for session {paymentID} was successful. Access link is now available.')
-            )
-            cursor.execute(
-                "INSERT INTO notification (userID, message) VALUES (%s, %s)",
-                (tutor_id, f'A student has joined your group session. You earned K{tutor_credit:.2f} (after commission).')
-            )
-
-            mysql.connection.commit()
-            cursor.close()
-            flash('Payment successful!', 'success')
-            return redirect(url_for('payment_confirmation', paymentID=paymentID))
-
-        except Exception as e:
-            mysql.connection.rollback()
-            flash(f'Payment processing failed: {str(e)}', 'error')
+            result = response.json()
+        except json.JSONDecodeError:
+            # Not JSON – show the raw error
+            flash('Payment service returned an invalid response. Please try again later.', 'error')
+            print("❌ Response was NOT JSON.")
             return render_template('group_payment.html', payment=payment)
 
-    # GET – show payment form
+        # Process JSON response
+        if response.status_code == 200 and result.get('status'):
+            data = result.get('data', {})
+            if data.get('status') in ['pending', 'pay-offline']:
+                # Payment initiated – save reference
+                cursor = mysql.connection.cursor()
+                cursor.execute(
+                    "UPDATE payment SET transactionID = %s, paymentStatus = 'pending' WHERE paymentID = %s",
+                    (reference, paymentID)
+                )
+                mysql.connection.commit()
+                cursor.close()
+
+                flash('Payment request sent to your phone. Please confirm on your mobile money app.', 'success')
+                return render_template('group_payment.html', payment=payment, payment_initiated=True)
+            else:
+                flash(f'Payment status: {data.get("status")}. Please try again.', 'error')
+        else:
+            # API returned error
+            error_msg = result.get('message', result.get('error', 'Unknown error from payment service'))
+            flash(f'Payment failed: {error_msg}', 'error')
+            print(f"❌ Lenco error: {error_msg}")
+
+    except requests.exceptions.Timeout:
+        flash('Payment request timed out. Please try again.', 'error')
+    except requests.exceptions.ConnectionError as e:
+        flash('Cannot connect to payment service. Please check your internet connection.', 'error')
+        print(f"❌ Connection error: {e}")
+    except Exception as e:
+        flash(f'Payment processing error: {str(e)}', 'error')
+        print(f"❌ Unexpected error: {e}")
+
     return render_template('group_payment.html', payment=payment)
 
-@app.route('/payment-confirmation/<int:paymentID>')
-def payment_confirmation(paymentID):
-    if 'userID' not in session:
-        flash('Please login.', 'error')
-        return redirect('/login')
+@app.route('/webhook/lenco', methods=['POST'])
+def lenco_webhook():
+    """
+    Receive real-time payment status updates from Lenco.
+    Expected JSON payload includes: reference, status, amount, etc.
+    """
+    try:
+        # Get raw JSON payload
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Invalid payload'}), 400
+
+        print(f" Webhook received: {data}")
+
+        # Extract fields (adjust names based on Lenco's actual payload)
+        reference = data.get('reference')
+        status = data.get('status')
+        # Sometimes status is nested: data.data.status
+        if not status and 'data' in data:
+            status = data['data'].get('status')
+
+        if not reference or not status:
+            print("Missing reference or status")
+            return jsonify({'error': 'Missing fields'}), 400
+
+        # ✅ Only process successful payments
+        if status.lower() == 'successful':
+            cursor = mysql.connection.cursor()
+            # Find payment by transactionID (which stores the reference)
+            cursor.execute(
+                "SELECT paymentID, groupSessionID, studentID FROM payment WHERE transactionID = %s AND paymentStatus != 'successful'",
+                (reference,)
+            )
+            payment = cursor.fetchone()
+
+            if payment:
+                payment_id = payment[0]
+                group_session_id = payment[1]
+                student_id = payment[2]
+
+                # Update payment status
+                cursor.execute(
+                    "UPDATE payment SET paymentStatus = 'successful' WHERE paymentID = %s",
+                    (payment_id,)
+                )
+                # Increment enrolled count and unlock access link
+                cursor.execute("""
+                    UPDATE groupsession 
+                    SET enrolledCount = enrolledCount + 1, accessLinkUnlocked = 1 
+                    WHERE groupSessionID = %s
+                """, (group_session_id,))
+
+                # Create notification for student
+                cursor.execute(
+                    "INSERT INTO notification (userID, message) VALUES (%s, %s)",
+                    (student_id, 'Your payment was successful! You can now join the session.')
+                )
+
+                mysql.connection.commit()
+                cursor.close()
+
+                print(f" Webhook processed: Payment {payment_id} marked successful")
+                return jsonify({'status': 'ok'}), 200
+            else:
+                print(f" Payment not found for reference: {reference}")
+                return jsonify({'error': 'Payment not found'}), 404
+        else:
+            # Optional: handle failed or pending status if needed
+            print(f"ℹ Ignoring status: {status}")
+            return jsonify({'status': 'ignored'}), 200
+
+    except Exception as e:
+        print(f" Webhook error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/payment/verify/<int:paymentID>', methods=['GET'])
+def verify_payment(paymentID):
+    if 'userID' not in session or session.get('role') != 'student':
+        return jsonify({'error': 'Unauthorized'}), 401
 
     cursor = mysql.connection.cursor()
-    cursor.execute("""
-        SELECT p.paymentID, p.amount, p.paymentStatus, p.transactionID,
-               s.courseCode, s.scheduledDate, s.scheduledTime,
-               u.fullName AS tutorName, g.accessLink, g.meetingPlatform
-        FROM payment p
-        JOIN groupsession g ON p.groupSessionID = g.groupSessionID
-        JOIN session s ON g.groupSessionID = s.sessionID
-        JOIN tutor t ON s.tutorID = t.tutorID
-        JOIN user u ON t.tutorID = u.userID
-        WHERE p.paymentID = %s AND p.studentID = %s AND p.paymentStatus = 'successful'
-    """, (paymentID, session['userID']))
+    cursor.execute(
+        "SELECT transactionID, paymentStatus FROM payment WHERE paymentID = %s AND studentID = %s",
+        (paymentID, session['userID'])
+    )
     payment = cursor.fetchone()
     cursor.close()
 
     if not payment:
-        flash('Payment not found or not successful.', 'error')
-        return redirect('/student-dashboard')
+        return jsonify({'error': 'Payment not found'}), 404
 
-    return render_template('payment_confirmation.html', payment=payment)
+    transaction_id, status = payment[0], payment[1]
+
+    if status == 'successful':
+        return jsonify({'status': 'successful'})
+
+    if not transaction_id:
+        return jsonify({'status': 'pending'})
+
+    try:
+        # ✅ Correct endpoint
+        url = f"{LENCO_BASE_URL}collections/status/{transaction_id}"
+        headers = {
+            'Authorization': f'Bearer {LENCO_SECRET_KEY}',
+            'accept': 'application/json'
+            # x-signature is NOT needed for outgoing API calls – drop it
+        }
+        response = requests.get(url, headers=headers, timeout=15)
+        result = response.json()
+
+        if result.get('status') and result.get('data', {}).get('status') == 'successful':
+            # Update DB and unlock
+            cursor = mysql.connection.cursor()
+            cursor.execute(
+                "UPDATE payment SET paymentStatus = 'successful' WHERE paymentID = %s",
+                (paymentID,)
+            )
+            cursor.execute("""
+                UPDATE groupsession g
+                JOIN payment p ON p.groupSessionID = g.groupSessionID
+                SET g.enrolledCount = g.enrolledCount + 1,
+                    g.accessLinkUnlocked = 1
+                WHERE p.paymentID = %s
+            """, (paymentID,))
+            mysql.connection.commit()
+            cursor.close()
+            return jsonify({'status': 'successful'})
+        elif result.get('data', {}).get('status') == 'failed':
+            cursor = mysql.connection.cursor()
+            cursor.execute(
+                "UPDATE payment SET paymentStatus = 'failed' WHERE paymentID = %s",
+                (paymentID,)
+            )
+            mysql.connection.commit()
+            cursor.close()
+            return jsonify({'status': 'failed'})
+        else:
+            return jsonify({'status': 'pending'})
+    except Exception as e:
+        print(f"Verify error: {e}")
+        return jsonify({'status': 'pending', 'error': str(e)})
+
 
 @app.route('/rate-session/<int:sessionID>', methods=['GET', 'POST'])
 def rate_session(sessionID):
@@ -2194,6 +2639,32 @@ def accept_session(sessionID):
     
     return redirect('/tutor-dashboard')
 
+@app.route('/api/availability/<int:tutorID>')
+def api_availability(tutorID):
+    """
+    Return available time slots for a tutor on a specific date.
+    Query params: date (YYYY-MM-DD)
+    """
+    date_str = request.args.get('date')
+    if not date_str:
+        return jsonify({'error': 'Date required'}), 400
+
+    try:
+        dt = datetime.strptime(date_str, '%Y-%m-%d')
+        day_of_week = dt.strftime('%A')  # Monday, Tuesday, etc.
+    except ValueError:
+        return jsonify({'error': 'Invalid date format'}), 400
+
+    cursor = mysql.connection.cursor()
+    cursor.execute(
+        "SELECT timeSlot FROM availability WHERE tutorID = %s AND dayOfWeek = %s ORDER BY timeSlot",
+        (tutorID, day_of_week)
+    )
+    slots = [row[0] for row in cursor.fetchall()]
+    cursor.close()
+
+    return jsonify({'slots': slots})
+
 @app.route('/api/unread-count')
 def unread_count():
     if 'userID' not in session:
@@ -2384,7 +2855,8 @@ def upcoming_sessions():
 
 @app.errorhandler(404)
 def page_not_found(error):
-    """Handle 404 errors by redirecting to the appropriate dashboard"""
+    if request.path == '/favicon.ico':
+        return '', 204  # silent ignore
     flash('Page not found. Redirecting to your dashboard.', 'error')
     return _redirect_on_error()
 

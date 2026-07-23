@@ -19,11 +19,7 @@
           <div class="logo-circle"></div>
           <h1>ZitConnect</h1>
         </div>
-        <a
-          href="/tutor-dashboard"
-          class="menu-item active-menu"
-          style="text-decoration: none; color: inherit"
-        >
+        <a href="/tutor-dashboard" class="menu-item active-menu" style="text-decoration: none; color: inherit">
           <i class="bi bi-speedometer2 menu-icon"></i>
           <span>Dashboard</span>
         </a>
@@ -43,10 +39,16 @@
           <i class="bi bi-currency-dollar menu-icon"></i>
           <span>Earnings</span>
         </a>
-        <div class="menu-item">
-          <i class="bi bi-journal-bookmark menu-icon"></i>
-          <span>Course Management</span>
-        </div>
+        <a href="/manage-courses" 
+        class="menu-item" 
+        style="text-decoration: none; color: inherit;">
+    <i class="bi bi-journal-bookmark menu-icon"></i>
+    <span>Course Management</span>
+</a>
+      <a href="/availability" class="menu-item " style="text-decoration: none; color: inherit;">
+                <i class="bi bi-calendar-week menu-icon"></i>
+                <span>Availability</span>
+            </a>
         <a
           href="/tutor-profile"
           class="menu-item"
@@ -54,29 +56,6 @@
         >
           <i class="bi bi-person-circle menu-icon"></i>
           <span>Profile</span>
-        </a>
-        <a
-          href="/notifications"
-          class="menu-item"
-          style="text-decoration: none; color: inherit; position: relative"
-        >
-          <i class="bi bi-bell menu-icon"></i>
-          <span>Notifications</span>
-          <span
-            id="tutor-notif-badge"
-            class="badge-notification"
-            style="
-              display: none;
-              position: absolute;
-              right: 20px;
-              background: #dc3545;
-              color: white;
-              border-radius: 50%;
-              padding: 2px 8px;
-              font-size: 12px;
-            "
-            >0</span
-          >
         </a>
         <a
           href="/logout"
@@ -359,44 +338,38 @@
         </div>
         {% endif %}
 
-        <!-- Completed Sessions Table -->
-        {% if completed_sessions and completed_sessions|length > 0 %}
-        <div class="bottom">
-          <h3>
-            <i class="bi bi-check-circle"></i> Completed Sessions
-            <span class="badge-count completed"
-              >{{ completed_sessions|length }}</span
-            >
-          </h3>
-          <div class="Container">
-            <h3>Student</h3>
-            <h3>Course</h3>
-            <h3>Date</h3>
-            <h3>Time</h3>
-            <h3>Type</h3>
-            <h3>Status</h3>
-          </div>
-          {% for session in completed_sessions %}
-          <div class="session-row">
-            <span
-              ><i class="bi bi-person-graduate"></i> {{ session.studentName
-              }}</span
-            >
-            <span
-              ><i class="bi bi-code-square"></i> {{ session.courseCode }}</span
-            >
-            <span
-              ><i class="bi bi-calendar"></i> {{ session.scheduledDate }}</span
-            >
-            <span><i class="bi bi-clock"></i> {{ session.scheduledTime }}</span>
-            <span><i class="bi bi-people"></i> {{ session.sessionType }}</span>
-            <span class="status-completed"
-              ><i class="bi bi-check2-all"></i> Completed</span
-            >
-          </div>
-          {% endfor %}
-        </div>
-        {% endif %}
+        <!-- Upcoming Confirmed Sessions Table -->
+{% if upcoming_sessions and upcoming_sessions|length > 0 %}
+<div class="bottom">
+    <h3><i class="bi bi-calendar-check"></i> Upcoming Confirmed Sessions <span class="badge-count approved">{{ upcoming_sessions|length }}</span></h3>
+    <div class="Container">
+        <h3>Student</h3>
+        <h3>Course</h3>
+        <h3>Date</h3>
+        <h3>Time</h3>
+        <h3>Type</h3>
+        <h3>Status</h3>
+        <h3>Action</h3>
+    </div>
+    {% for session in upcoming_sessions %}
+    <div class="session-row">
+        <span><i class="bi bi-person-graduate"></i> {{ session.studentName }}</span>
+        <span><i class="bi bi-code-square"></i> {{ session.courseCode }}</span>
+        <span><i class="bi bi-calendar"></i> {{ session.scheduledDate }}</span>
+        <span><i class="bi bi-clock"></i> {{ session.scheduledTime }}</span>
+        <span><i class="bi bi-people"></i> {{ session.sessionType }}</span>
+        <span class="status-approved"><i class="bi bi-check-circle-fill"></i> Confirmed</span>
+        <span>
+            <form action="/session/complete/{{ session.sessionID }}" method="post" style="display: inline;">
+                <button type="submit" class="btn-complete" style="background: #17a2b8; color: white; border: none; padding: 4px 12px; border-radius: 6px; cursor: pointer; font-size: 12px;">
+                    <i class="bi bi-check2-all"></i> Complete
+                </button>
+            </form>
+        </span>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
 
         <!-- Declined/Cancelled Sessions Table -->
         {% if declined_sessions and declined_sessions|length > 0 or
