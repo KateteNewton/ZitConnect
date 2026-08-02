@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Session - ZitConnect</title>
+    <link rel="stylesheet" href="/static/css/student_dashbord.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        .session-type-toggle {
+            display: flex;
+            gap: 20px;
+            margin: 16px 0;
+        }
+        .session-type-toggle label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .group-session-details {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 8px;
+            font-size: 14px;
+        }
+        .group-session-details span {
+            display: inline-block;
+            margin-right: 16px;
+        }
+        .toggle-section {
+            display: none;
+        }
+        .toggle-section.active {
+            display: block;
+        }
+        .booking-form .form-group {
+            margin-bottom: 16px;
+        }
+        .booking-form label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .booking-form select,
+        .booking-form input {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+        .btn {
+            padding: 10px 24px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .primary-btn {
+            background: #1a3a5c;
+            color: white;
+        }
+        .primary-btn:hover {
+            background: #2c5f8a;
+        }
+        .success-btn {
+            background: #28a745;
+            color: white;
+        }
+        .success-btn:hover {
+            background: #1e7e34;
+        }
+    </style>
+</head>
+<body>
+    {% include 'student_nav.html' %}
+
+    <div class="page-wrapper">
+        <div class="sidebar">
+            <div class="sidebar-profile">
+                <div class="sidebar-avatar"><i class="fas fa-user"></i></div>
+                <div class="sidebar-name">{{ fullName or 'Student' }}</div>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="/student-dashboard"><i class="fas fa-home"></i><span>Home</span></a></li>
+                <li><a href="/upcoming-sessions"><i class="fas fa-calendar-check"></i><span>Sessions</span></a></li>
+                <li><a href="/student-profile"><i class="fas fa-user-circle"></i><span>Profile</span></a></li>
+                <li><a href="/logout"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a></li>
+            </ul>
+        </div>
+
+        <div class="content">
+            <div class="content-wrapper" style="max-width: 700px;">
+                <div class="card" style="padding: 28px;">
+                    <h2 style="font-size: 22px; font-weight: 700; margin-bottom: 6px;">Book a session with</h2>
+                    <p style="font-size: 18px; font-weight: 600; color: #1a3a5c; margin-bottom: 20px;">{{ tutor_name }}</p>
+
+                    <form id="bookingForm" method="post" class="booking-form">
+                        <input type="hidden" name="tutorID" value="{{ tutor_id }}">
+
+                        <!-- Course selection -->
+                        <div class="form-group">
+                            <label for="courseCode">Select Course</label>
+                            <select name="courseCode" id="courseCode" required>
+                                <option value="">Choose a course</option>
+                                {% for c in courses %}
+                                    <option value="{{ c[0] }}">{{ c[0] }} – {{ c[1] }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Session Type: Individual or Group -->
+                        <div class="form-group">
+                            <label>Session Type</label>
+                            <div class="session-type-toggle">
+                                <label>
+                                    <input type="radio" name="sessionType" value="individual" checked>
+                                    Individual Session
+                                </label>
+                                <label>
+                                    <input type="radio" name="sessionType" value="group">
+                                    Group Session
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Individual section -->
+                        <div id="individualSection" class="toggle-section active">
+                            <div class="form-group">
+                                <label for="scheduledDate">Date</label>
+                                <input type="date" name="scheduledDate" id="scheduledDate" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="timeSlot">Time Slot</label>
+                                <select name="timeSlot" id="timeSlot" required>
+                                    <option value="">Choose time</option>
+                                    <option value="08:00:00">08:00 – 09:00</option>
+                                    <option value="10:00:00">10:00 – 11:00</option>
+                                    <option value="14:00:00">14:00 – 15:00</option>
+                                    <option value="17:00:00">17:00 – 19:00</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn primary-btn" style="width:100%; margin-top:8px;">
+                                <i class="fas fa-paper-plane"></i> Confirm Request
+                            </button>
+                        </div>
+
+                        <!-- Group section -->
+                        <div id="groupSection" class="toggle-section">
+                            <div class="form-group">
+                                <label for="groupSessionSelect">Available Group Sessions</label>
+                                <select name="groupSessionID" id="groupSessionSelect" required>
+                                    <option value="">Select a group session</option>
+                                    {% for gs in group_sessions %}
+                                        <option value="{{ gs.sessionID }}"
+                                                data-course="{{ gs.courseCode }}"
+                                                data-date="{{ gs.scheduledDate }}"
+                                                data-time="{{ gs.scheduledTime }}"
+                                                data-capacity="{{ gs.maxCapacity }}"
+                                                data-enrolled="{{ gs.enrolledCount }}"
+                                                data-price="{{ gs.pricePerStudent }}">
+                                            {{ gs.courseCode }} – {{ gs.scheduledDate }} {{ gs.scheduledTime }}
+                                            ({{ gs.enrolledCount }}/{{ gs.maxCapacity }}) – K{{ "%.2f"|format(gs.pricePerStudent) }}
+                                        </option>
+                                    {% else %}
+                                        <option value="">No group sessions available</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div id="groupDetails" class="group-session-details" style="display:none;">
+                                <!-- populated by JS -->
+                            </div>
+                            <button type="button" id="payNowBtn" class="btn success-btn" style="width:100%; margin-top:8px;" disabled>
+                                <i class="fas fa-credit-card"></i> Pay Now
+                            </button>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Toggle between individual and group sections
+        const typeRadios = document.querySelectorAll('input[name="sessionType"]');
+        const individualSection = document.getElementById('individualSection');
+        const groupSection = document.getElementById('groupSection');
+        const courseSelect = document.getElementById('courseCode');
+        const groupSelect = document.getElementById('groupSessionSelect');
+        const groupDetails = document.getElementById('groupDetails');
+        const payBtn = document.getElementById('payNowBtn');
+        const bookingForm = document.getElementById('bookingForm');
+        // Fetch available time slots when date changes
+const dateInput = document.getElementById('scheduledDate');
+const timeSlotSelect = document.getElementById('timeSlot');
+
+dateInput.addEventListener('change', function() {
+    const date = this.value;
+    const tutorId = document.querySelector('input[name="tutorID"]').value;
+    if (!date || !tutorId) return;
+
+    // Clear current options
+    timeSlotSelect.innerHTML = '<option value="">Loading...</option>';
+
+    fetch(`/api/availability/${tutorId}?date=${date}`)
+        .then(response => response.json())
+        .then(data => {
+            timeSlotSelect.innerHTML = '<option value="">Select a time</option>';
+            if (data.slots && data.slots.length > 0) {
+                data.slots.forEach(slot => {
+                    const option = document.createElement('option');
+                    option.value = slot;
+                    option.textContent = slot;
+                    timeSlotSelect.appendChild(option);
+                });
+            } else {
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = 'No available slots';
+                timeSlotSelect.appendChild(option);
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching slots:', error);
+            timeSlotSelect.innerHTML = '<option value="">Error loading slots</option>';
+        });
+});
+
+        typeRadios.forEach(radio => {
+            radio.addEventListener('change', function() {
+                if (this.value === 'individual') {
+                    individualSection.classList.add('active');
+                    groupSection.classList.remove('active');
+                    // Enable individual inputs
+                    document.getElementById('scheduledDate').required = true;
+                    document.getElementById('timeSlot').required = true;
+                    // Disable group selection
+                    groupSelect.disabled = true;
+                    payBtn.disabled = true;
+                    groupDetails.style.display = 'none';
+                    // Reset form action to individual booking
+                    bookingForm.action = '/book-session';
+                } else {
+                    individualSection.classList.remove('active');
+                    groupSection.classList.add('active');
+                    // Disable individual inputs
+                    document.getElementById('scheduledDate').required = false;
+                    document.getElementById('timeSlot').required = false;
+                    // Enable group selection
+                    groupSelect.disabled = false;
+                    // Auto-populate course from selected group
+                    if (groupSelect.value) {
+                        const selectedOption = groupSelect.options[groupSelect.selectedIndex];
+                        const courseCode = selectedOption.getAttribute('data-course');
+                        if (courseCode) {
+                            const courseOptions = courseSelect.options;
+                            for (let i = 0; i < courseOptions.length; i++) {
+                                if (courseOptions[i].value === courseCode) {
+                                    courseSelect.selectedIndex = i;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    updateGroupDetails();
+                }
+            });
+        });
+
+        // Update group details when selection changes
+        groupSelect.addEventListener('change', function() {
+            updateGroupDetails();
+        });
+
+        function updateGroupDetails() {
+            const selected = groupSelect.options[groupSelect.selectedIndex];
+            if (!selected || !selected.value) {
+                groupDetails.style.display = 'none';
+                payBtn.disabled = true;
+                return;
+            }
+            const date = selected.getAttribute('data-date');
+            const time = selected.getAttribute('data-time');
+            const capacity = selected.getAttribute('data-capacity');
+            const enrolled = selected.getAttribute('data-enrolled');
+            const price = selected.getAttribute('data-price');
+            const course = selected.getAttribute('data-course');
+            // Also update course dropdown
+            if (course) {
+                const courseOptions = courseSelect.options;
+                for (let i = 0; i < courseOptions.length; i++) {
+                    if (courseOptions[i].value === course) {
+                        courseSelect.selectedIndex = i;
+                        break;
+                    }
+                }
+            }
+            groupDetails.innerHTML = `
+                <span><strong>Course:</strong> ${course}</span>
+                <span><strong>Date:</strong> ${date}</span>
+                <span><strong>Time:</strong> ${time}</span>
+                <span><strong>Capacity:</strong> ${enrolled}/${capacity}</span>
+                <span><strong>Price:</strong> K${parseFloat(price).toFixed(2)}</span>
+            `;
+            groupDetails.style.display = 'block';
+            payBtn.disabled = false;
+        }
+
+        // Pay Now button: submit the form to /join-session/<groupSessionID>
+        payBtn.addEventListener('click', function() {
+            const selected = groupSelect.options[groupSelect.selectedIndex];
+            if (!selected || !selected.value) {
+                alert('Please select a group session.');
+                return;
+            }
+            const groupID = selected.value;
+            bookingForm.action = `/join-session/${groupID}`;
+            bookingForm.submit();
+        });
+
+        // Disable group select initially (individual is default)
+        groupSelect.disabled = true;
+    </script>
+</body>
+</html>

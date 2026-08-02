@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <link rel="stylesheet" href="/static/css/student_search_result.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined">
+  </head>
+  <body>
+    <nav class="navigation-bar">
+      <div class="nav-left">
+        <button class="back-arrow" aria-label="Go back">
+          <span class="material-symbols-outlined">arrow_back</span>
+        </button>
+      
+      <div class="search">
+        <span class="material-symbols-outlined search-icon">search</span>
+        <input type="search" class="search_input" placeholder="Search by course code or tutor name..." />
+      </div>
+        <div class="logo">
+          <div class="logo-mark">ZC</div>
+         
+        </div>
+      </div>
+    </nav>
+    <div class="container">
+      <div class ="main">
+    <h1 class="page-title">
+      Tutor search Results
+    </h1>
+    <div class="Results">
+      <div class="cards">
+        {% if tutors %}
+          {% for tutor in tutors %}
+            <div class="card">
+              <div class="profile">
+                <div class="avatar"></div>
+                <div class="profile-info">
+                  <h2>{{ tutor.fullName }}</h2>
+                  <div class="rating">
+                    <span class="badge">approved</span><br>
+                    <span>Course: {{ tutor.courseCode }}</span>
+                  </div>
+                  <p>Verified tutor profile</p>
+                  <div class="tags">
+                    <span class="tag">{{ tutor.courseCode }}</span>
+                  </div>
+                  <form action="/book-session" method="get">
+                    <input type="hidden" name="tutor_id" value="{{ tutor.tutorID }}">
+                    <button type="submit" class="book-btn">Book Session</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="card">
+            <div class="profile-info">
+              <h2>No tutors found for "{{ course_code }}"</h2>
+              <p>Please try another course code or check back later.</p>
+            </div>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+
+</body>
+  </html> 

@@ -1,0 +1,41 @@
+<!-- Navigation Header -->
+<div class="navbar">
+  <!-- Left: Hamburger + Logo + Search -->
+  <div class="navbar-left">
+    <button class="hamburger-btn" id="hamburgerBtn" aria-label="Toggle navigation">
+      <i class="fas fa-bars"></i>
+    </button>
+    <div class="logo">ZC</div>
+    <form action="/search" method="get" class="search-container" style="margin: 0;">
+      <i class="fas fa-search"></i>
+      <input type="text" name="courseCode" placeholder="Search courses..." />
+    </form>
+  </div>
+
+  <!-- Center: Navigation Icons (desktop only) -->
+  <div class="navbar-center desktop-only">
+    <div class="nav-icon">
+      <a href="/student-dashboard" title="Home">
+        <i class="fas fa-home"></i>
+      </a>
+    </div>
+    <div class="nav-icon">
+      <a href="/upcoming-sessions" title="Upcoming Sessions">
+        <i class="fas fa-calendar"></i>
+      </a>
+    </div>
+  </div>
+
+  <!-- Right: Notifications and Profile (desktop only) -->
+  <div class="navbar-right desktop-only">
+    <a href="/notifications" style="position: relative; text-decoration: none; color: inherit;">
+      <i class="fas fa-bell" title="Notifications"></i>
+      <span id="student-notif-badge" class="badge-notification" style="display:none; position: absolute; top: -8px; right: -10px; background: #dc3545; color: white; border-radius: 50%; padding: 2px 7px; font-size: 11px; font-weight: bold;">0</span>
+    </a>
+    <div class="nav-icon">
+      <a href="/student-profile" title="Profile">
+        <i class="fas fa-user-circle"></i>
+      </a>
+    </div>
+  </div>
+</div>

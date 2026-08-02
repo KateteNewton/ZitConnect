@@ -3,58 +3,247 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZitConnect - Register</title>
     <link rel="stylesheet" href="/static/css/style.css">
-    <title>Create Account</title>
+    <style>
+        .flash-messages {
+            margin: 0 0 20px 0;
+            padding: 0;
+            list-style: none;
+        }
+        .flash-messages li {
+            padding: 12px;
+            margin: 0 0 10px 0;
+            border-radius: 5px;
+            font-size: 13px;
+        }
+        .flash-messages .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .flash-messages .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .password-container {
+            position: relative;
+        }
+        .password-match-indicator {
+            font-size: 12px;
+            margin-top: 5px;
+            padding: 8px;
+            border-radius: 4px;
+            display: none;
+            text-align: center;
+            font-weight: bold;
+        }
+        .password-match-indicator.match {
+            display: block;
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .password-match-indicator.no-match {
+            display: block;
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .next-button:disabled {
+            background-color: #888;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        .next-button:disabled:hover {
+            background-color: #888;
+        }
+        .register-container {
+            min-height: 100vh;
+            background-color: #2C7CB6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+        }
+        .register-form {
+            width: 100%;
+            max-width: 400px;
+        }
+        .register-form h1 {
+            color: white;
+            font-size: 32px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        .register-form h2 {
+            color: white;
+            font-size: 16px;
+            font-weight: normal;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .register-form-group {
+            margin-bottom: 20px;
+        }
+        .register-form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: white;
+            font-size: 14px;
+        }
+        .register-form-group input {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+            background-color: white;
+        }
+        .register-form-group input:focus {
+            outline: none;
+        }
+        .register-btn {
+            width: 124px;
+            height: 60px;
+            background: #D69E2E;
+            border-radius: 10px;
+            color: #333;
+            border: none;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 10px auto 0;
+            font-family: 'Inter', Arial, sans-serif;
+            display: block;
+        }
+        .register-btn:hover {
+            background-color: #b87d1f;
+        }
+        .register-btn:disabled {
+            background-color: #888;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        .register-btn:disabled:hover {
+            background-color: #888;
+        }
+        .register-form p {
+            text-align: center;
+            margin-top: 20px;
+            color: white;
+            font-size: 14px;
+        }
+        .register-form p a {
+            color: #FFCC00;
+            text-decoration: none;
+        }
+        .register-form p a:hover {
+            text-decoration: underline;
+        }
+        .back-link {
+            display: block;
+            text-align: center;
+            margin-top: 15px;
+            color: #FFCC00;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
 </head>
 <body>
-    <div class="split-screen">
-        <div class="left-side">
-            <div class="zc-circle">
-                <span>ZC</span>
+    <div class="register-container">
+        <form class="register-form" method="POST" action="/register" id="registerForm">
+            <h1>Create Account</h1>
+            <h2>Register using ZitConnect</h2>
+            
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <ul class="flash-messages">
+                        {% for category, message in messages %}
+                            <li class="{{ category }}">{{ message }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            {% endwith %}
+            
+            <div class="register-form-group">
+                <label>Full Name</label>
+                <input type="text" name="name" required>
             </div>
-            <h1>ZitConnect</h1>
-            <p>Peer To Peer Academic Support</p>
-        </div>
 
-        <div class="right-side">
-            <form>
-                <div class="mobile-logo">
-                    <div class="zc-circle-mobile">
-                        <span>ZC</span>
-                    </div>
-                    <h1>Create Account</h1>
+            <div class="register-form-group">
+                <label>Username</label>
+                <input type="text" name="username" required>
+            </div>
+
+            <div class="register-form-group">
+                <label>Email Address</label>
+                <input type="email" name="email" required>
+            </div>
+
+            <div class="register-form-group">
+                <label>Password</label>
+                <div class="password-container">
+                    <input type="password" name="password" id="password" required>
                 </div>
-                <h2>Register Using ZitConnect</h2>
-                
-                <div class="form-group">
+            </div>
 
-                    <label for="fullname">Full Names</label>
-                    <input type="text" id="fullname" name="fullname">
+            <div class="register-form-group">
+                <label>Confirm Password</label>
+                <div class="password-container">
+                    <input type="password" name="confirm_password" id="confirmPassword" required>
+                    <div class="password-match-indicator" id="passwordIndicator"></div>
                 </div>
+            </div>
 
-                <div class="form-group">
-                    <label for="username">UserName</label>
-                    <input type="text" id="username" name="username">
-                </div>
+            <button class="register-btn" type="submit" id="submitBtn">Next</button>
+            
+            <p>Already Have An Account? <a href="/login">Login</a></p>
+        </form>
+    </div>
 
-                <div class="form-group">
-                    <label for="email">Email Address</label>
-                    <input type="email" id="email" name="email">
-                </div>
+    <script>
+        const passwordInput = document.getElementById('password');
+        const confirmPasswordInput = document.getElementById('confirmPassword');
+        const passwordIndicator = document.getElementById('passwordIndicator');
+        const submitBtn = document.getElementById('submitBtn');
 
-                <div class="form-group">
-                    <label for="password">Password</label>
-                    <input type="password" id="password" name="password">
-                </div>
+        function checkPasswordMatch() {
+            const password = passwordInput.value;
+            const confirmPassword = confirmPasswordInput.value;
 
-                <div class="form-group">
-                    <label for="confirm_password">Confirm Password</label>
-                    <input type="password" id="confirm_password" name="confirm_password">
-                </div>
+            if (confirmPassword === '') {
+                passwordIndicator.style.display = 'none';
+                submitBtn.disabled = false;
+                return;
+            }
 
-                <button type="submit">Next</button>
-                <p>Already Have an Account? <a href="login.html">Login</a></p>
-            </form>
-        </div>
+            if (password === confirmPassword && password !== '') {
+                passwordIndicator.className = 'password-match-indicator match';
+                passwordIndicator.textContent = '✓ Passwords match';
+                submitBtn.disabled = false;
+            } else {
+                passwordIndicator.className = 'password-match-indicator no-match';
+                passwordIndicator.textContent = '✗ Passwords do not match';
+                submitBtn.disabled = true;
+            }
+        }
+
+        passwordInput.addEventListener('input', checkPasswordMatch);
+        confirmPasswordInput.addEventListener('input', checkPasswordMatch);
+
+        // Prevent form submission if passwords don't match
+        document.getElementById('registerForm').addEventListener('submit', function(e) {
+            if (passwordInput.value !== confirmPasswordInput.value) {
+                e.preventDefault();
+                alert('Passwords do not match! Please check and try again.');
+            }
+        });
+    </script>
 </body>
 </html>

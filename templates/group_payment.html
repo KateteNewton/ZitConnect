@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Group Session Payment - ZitConnect</title>
+    <link rel="stylesheet" href="/static/css/student_dashbord.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined">
+    <style>
+        .payment-container { max-width: 700px; margin: 0 auto; }
+        .payment-card {
+            background: white;
+            border-radius: 12px;
+            padding: 28px;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        .payment-card h2 { font-size: 22px; font-weight: 700; margin-bottom: 6px; color: #000; }
+        .payment-card .subtitle { color: #65676b; font-size: 14px; margin-bottom: 20px; }
+        .session-details-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px 20px;
+            background: #f8f9fa;
+            padding: 16px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .session-details-grid .detail-item { display: flex; flex-direction: column; }
+        .session-details-grid .detail-item .label {
+            font-size: 12px;
+            color: #65676b;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .session-details-grid .detail-item .value {
+            font-size: 15px;
+            font-weight: 600;
+            color: #000;
+        }
+        .payment-form .form-group { margin-bottom: 16px; }
+        .payment-form label {
+            display: block;
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 4px;
+            color: #000;
+        }
+        .payment-form input,
+        .payment-form select {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 15px;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .payment-form input:focus,
+        .payment-form select:focus {
+            border-color: #49709c;
+            box-shadow: 0 0 0 3px rgba(73,112,156,0.1);
+        }
+        .btn-pay {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 14px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .btn-pay:hover:not(:disabled) { background: #1e7e34; }
+        .btn-pay:disabled { opacity: 0.7; cursor: not-allowed; }
+        .btn-pay.processing { background: #ffc107; color: #333; }
+        .note-box {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin: 16px 0;
+            font-size: 14px;
+            color: #856404;
+        }
+        .note-box i { margin-right: 8px; }
+        .access-link-box {
+            background: #d4edda;
+            border: 1px solid #28a745;
+            padding: 16px 20px;
+            border-radius: 8px;
+            margin-top: 16px;
+            display: none;
+        }
+        .access-link-box.show { display: block; }
+        .access-link-box a {
+            color: #155724;
+            font-weight: 700;
+            text-decoration: none;
+            word-break: break-all;
+        }
+        .access-link-box a:hover { text-decoration: underline; }
+        .spinner { display: inline-block; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .status-badge.pending { background: #fef3c7; color: #b45309; }
+        .status-badge.successful { background: #d1fae5; color: #065f46; }
+        .status-badge.failed { background: #fee2e2; color: #7f1d1d; }
+        .alert {
+            padding: 10px 14px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+        .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .alert-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .alert-warning { background: #fff3cd; color: #856404; border: 1px solid #ffc107; }
+
+        @media (max-width: 600px) {
+            .session-details-grid { grid-template-columns: 1fr; gap: 6px; }
+            .payment-form .phone-input-group { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    {% include 'student_nav.html' %}
+
+    <div class="page-wrapper">
+        <div class="sidebar">
+            <div class="sidebar-profile">
+                <div class="sidebar-avatar"><i class="fas fa-user"></i></div>
+                <div class="sidebar-name">{{ fullName or 'Student' }}</div>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="/student-dashboard"><i class="fas fa-home"></i><span>Home</span></a></li>
+                <li><a href="/upcoming-sessions"><i class="fas fa-calendar-check"></i><span>Sessions</span></a></li>
+                <li><a href="#saved"><i class="fas fa-bookmark"></i><span>Saved</span></a></li>
+                <li><a href="/notifications"><i class="fas fa-bell"></i><span>Notifications</span></a></li>
+                <li><a href="/logout"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a></li>
+            </ul>
+        </div>
+
+        <div class="content">
+            <div class="content-wrapper payment-container">
+                <div class="payment-card">
+                    <h2>Complete Your Payment</h2>
+                    <p class="subtitle">Pay to join this group session and get the meeting link.</p>
+
+                    <!-- Flash Messages -->
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }}">{{ message }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+
+                    <!-- Session Details -->
+                    <div class="session-details-grid">
+                        <div class="detail-item">
+                            <span class="label">Tutor</span>
+                            <span class="value">{{ payment.tutorName }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="label">Course</span>
+                            <span class="value">{{ payment.courseCode }} – {{ payment.courseName }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="label">Date & Time</span>
+                            <span class="value">
+                                {% if payment.scheduledDate %}
+                                    {{ payment.scheduledDate.strftime('%Y-%m-%d %H:%M') }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="label">Amount</span>
+                            <span class="value" style="color: #28a745; font-size: 20px;">ZMW {{ "%.2f"|format(payment.amount) }}</span>
+                        </div>
+                        <div class="detail-item" style="grid-column: 1 / -1;">
+                            <span class="label">Meeting Platform</span>
+                            <span class="value">{{ payment.meetingPlatform or 'Not specified' }}</span>
+                        </div>
+                        <div class="detail-item" style="grid-column: 1 / -1;">
+                            <span class="label">Payment Status</span>
+                            <span class="value">
+                                <span class="status-badge {{ payment.paymentStatus }}">
+                                    {{ payment.paymentStatus|capitalize }}
+                                </span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Access Link (if payment successful) -->
+{% if payment_success and payment.accessLinkUnlocked %}
+    <div class="access-link-box show">
+        <i class="fas fa-check-circle" style="color: #28a745; font-size: 28px;"></i>
+        <h3 style="color: #155724; margin: 8px 0 4px;">Payment Successful!</h3>
+        <p style="font-size: 14px; color: #155724;">You can now join your session:</p>
+        <a href="{{ payment.accessLink }}" target="_blank" rel="noopener noreferrer" class="btn primary-btn" style="display: inline-block; margin-top: 10px; padding: 10px 30px; text-decoration: none;">
+            <i class="fas fa-external-link-alt"></i> Proceed to Session
+        </a>
+    </div>
+{% endif %}
+
+                    <!-- Payment Form (only if not successful) -->
+                    {% if payment.paymentStatus != 'successful' %}
+                        <form method="post" class="payment-form" id="paymentForm">
+                            <div class="form-group">
+                                <label for="operator">Mobile Money Network</label>
+                                <select name="operator" id="operator" required>
+                                    <option value="">Select your network</option>
+                                    <option value="airtel">Airtel Money</option>
+                                    <option value="mtn">MTN Mobile Money</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="phone_number">Mobile Money Number (10 digits)</label>
+                                <input type="tel" name="phone_number" id="phone_number"
+                                       placeholder="e.g. 0977123456"
+                                       pattern="(09|07)[0-9]{8}"
+                                       title="Enter a valid 10-digit Zambian number (e.g., 0977123456)"
+                                       required>
+                                <small style="color: #65676b; font-size: 12px;">Enter your 10-digit mobile number starting with 09 or 07</small>
+                            </div>
+
+                            <div class="note-box">
+                                <i class="fas fa-info-circle"></i>
+                                <strong>Important:</strong> Your spot is only confirmed after payment is received.
+                                You will receive a payment request on your phone. Confirm the payment using your mobile money PIN.
+                            </div>
+
+                            <button type="submit" class="btn-pay" id="payBtn">
+                                <i class="fas fa-credit-card"></i>
+                                <span id="payBtnText">Pay Now</span>
+                            </button>
+                        </form>
+
+                        <!-- Payment initiated - waiting for confirmation -->
+                        {% if payment_initiated %}
+                            <div style="margin-top: 16px; padding: 16px; background: #e7f3ff; border-radius: 8px; border: 1px solid #49709c; text-align: center;" id="waitingBox">
+                                <i class="fas fa-spinner fa-spin" style="font-size: 24px; color: #49709c;"></i>
+                                <p style="margin-top: 8px; font-weight: 600;">Waiting for payment confirmation...</p>
+                                <p style="font-size: 14px; color: #65676b;">Please check your phone and confirm the payment request.</p>
+                                <button onclick="checkPaymentStatus({{ payment.paymentID }})" class="btn primary-btn" style="margin-top: 12px;">
+                                    <i class="fas fa-sync-alt"></i> Check Status
+                                </button>
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <!-- Payment already successful -->
+                        <div style="margin-top: 16px; padding: 16px; background: #d4edda; border-radius: 8px; border: 1px solid #28a745;">
+                            <i class="fas fa-check-circle" style="color: #28a745; font-size: 20px;"></i>
+                            <strong style="color: #155724;">Payment Successful!</strong>
+                            <p style="margin-top: 8px; color: #155724;">You can now access the session link above.</p>
+                            <a href="{{ payment.accessLink }}" target="_blank" class="btn primary-btn" style="margin-top: 8px; text-decoration: none; display: inline-block;">
+                                <i class="fas fa-external-link-alt"></i> Join Session
+                            </a>
+                        </div>
+                    {% endif %}
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const payBtn = document.getElementById('payBtn');
+        const payBtnText = document.getElementById('payBtnText');
+        const paymentForm = document.getElementById('paymentForm');
+
+        if (paymentForm) {
+            paymentForm.addEventListener('submit', function(e) {
+                payBtn.disabled = true;
+                payBtn.classList.add('processing');
+                payBtnText.innerHTML = '<span class="spinner"><i class="fas fa-spinner"></i></span> Processing...';
+                payBtn.querySelector('i').className = 'fas fa-spinner fa-spin';
+            });
+        }
+
+        function checkPaymentStatus(paymentId) {
+            const waitingBox = document.getElementById('waitingBox');
+            if (waitingBox) {
+                waitingBox.innerHTML = `
+                    <i class="fas fa-spinner fa-spin" style="font-size: 24px; color: #49709c;"></i>
+                    <p style="margin-top: 8px; font-weight: 600;">Checking payment status...</p>
+                `;
+            }
+
+            fetch(`/payment/verify/${paymentId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'successful') {
+                        window.location.reload();
+                    } else {
+                        if (waitingBox) {
+                            waitingBox.innerHTML = `
+                                <i class="fas fa-clock" style="font-size: 24px; color: #ffc107;"></i>
+                                <p style="margin-top: 8px; font-weight: 600;">Payment still pending...</p>
+                                <p style="font-size: 14px; color: #65676b;">Please check your phone and confirm the payment.</p>
+                                <button onclick="checkPaymentStatus(${paymentId})" class="btn primary-btn" style="margin-top: 12px;">
+                                    <i class="fas fa-sync-alt"></i> Check Again
+                                </button>
+                            `;
+                        }
+                    }
+                })
+                .catch(error => {
+                    if (waitingBox) {
+                        waitingBox.innerHTML = `
+                            <i class="fas fa-exclamation-triangle" style="font-size: 24px; color: #dc3545;"></i>
+                            <p style="margin-top: 8px; font-weight: 600;">Error checking status</p>
+                            <p style="font-size: 14px; color: #65676b;">Please try again later.</p>
+                            <button onclick="checkPaymentStatus(${paymentId})" class="btn primary-btn" style="margin-top: 12px;">
+                                <i class="fas fa-sync-alt"></i> Try Again
+                            </button>
+                        `;
+                    }
+                });
+        }
+
+        {% if payment_initiated %}
+            let checkInterval = setInterval(function() {
+                fetch(`/payment/verify/{{ payment.paymentID }}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'successful') {
+                            clearInterval(checkInterval);
+                            window.location.reload();
+                        }
+                    })
+                    .catch(() => {});
+            }, 5000);
+
+            setTimeout(function() {
+                clearInterval(checkInterval);
+            }, 120000);
+        {% endif %}
+    </script>
+</body>
+</html>
