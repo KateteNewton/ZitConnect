@@ -7,7 +7,54 @@
     <link rel="stylesheet" href="/static/css/tutor_dashboard.css">
     <link rel="stylesheet" href="/static/css/tutor_profile.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+
+    <!-- ====== ADDED: FULL MOBILE RESPONSIVE STYLES (no changes to existing logic) ====== -->
     <style>
+        /* -------- Mobile Menu Toggle Button -------- */
+        .mobile-menu-toggle {
+            display: none;
+            background: #1a3a5c;
+            color: #fff;
+            border: none;
+            font-size: 28px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            position: fixed;
+            top: 12px;
+            left: 12px;
+            z-index: 9999;
+            transition: background 0.2s;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            line-height: 1;
+        }
+        .mobile-menu-toggle:hover {
+            background: #0f2a44;
+        }
+        .mobile-menu-toggle i {
+            display: block;
+        }
+
+        /* -------- Sidebar Overlay (for mobile) -------- */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 9997;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        .sidebar-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* -------- Existing wallet styles (already responsive-ish) -------- */
         .wallet-balance-card {
             background: #1a3a5c;
             color: white;
@@ -92,29 +139,300 @@
             color: #6c757d;
             font-size: 14px;
         }
+
+        /* -------- Enhanced Responsive Adjustments -------- */
+
+        /* 992px and below — tablet */
+        @media (max-width: 992px) {
+            .Dashboard {
+                grid-template-columns: 220px 1fr;
+            }
+            .left {
+                padding: 16px 0;
+            }
+            .Header h1 {
+                font-size: 20px;
+            }
+            .Header {
+                padding: 0 14px 14px 14px;
+            }
+            .menu-item {
+                padding: 10px 14px;
+                font-size: 14px;
+            }
+            .menu-icon {
+                font-size: 16px;
+                width: 22px;
+            }
+            .right {
+                padding: 14px;
+            }
+            .wallet-balance-card .balance {
+                font-size: 34px;
+            }
+            .stats-card .number {
+                font-size: 24px;
+            }
+        }
+
+        /* 768px and below — mobile large */
         @media (max-width: 768px) {
+            /* show hamburger */
+            .mobile-menu-toggle {
+                display: block;
+            }
+            .sidebar-overlay {
+                display: block;
+            }
+
+            /* Sidebar becomes slide-out panel */
+            .Dashboard {
+                grid-template-columns: 1fr;
+            }
+            .left {
+                position: fixed;
+                top: 0;
+                left: -280px;
+                width: 280px;
+                height: 100%;
+                z-index: 9998;
+                transition: left 0.3s ease;
+                overflow-y: auto;
+                box-shadow: 2px 0 12px rgba(0, 0, 0, 0.2);
+                padding: 20px 0;
+                background: #1a3a5c;
+            }
+            .left.open {
+                left: 0;
+            }
+            .left .Header {
+                padding: 0 16px 16px 16px;
+            }
+            .left .Header h1 {
+                font-size: 22px;
+            }
+            .menu-item {
+                padding: 12px 18px;
+                font-size: 15px;
+            }
+            .menu-item .menu-icon {
+                font-size: 18px;
+                width: 24px;
+            }
+            .logout-item {
+                margin-top: 16px;
+                padding-top: 16px;
+            }
+
+            /* main content */
+            .right {
+                padding: 12px;
+                min-height: 100vh;
+                padding-top: 70px;
+            }
+
+            .Welcome_part h2 {
+                font-size: 18px;
+            }
+            .Welcome_part p {
+                font-size: 14px;
+            }
+
+            /* Wallet balance card */
             .wallet-balance-card {
                 flex-direction: column;
-                align-items: flex-start;
+                align-items: stretch;
                 gap: 16px;
+                padding: 20px;
+            }
+            .wallet-balance-card .balance {
+                font-size: 32px;
             }
             .withdraw-form {
                 width: 100%;
+                flex-direction: column;
+                gap: 10px;
             }
             .withdraw-form input {
-                flex: 1;
                 width: 100%;
+                padding: 12px;
+                font-size: 16px;
             }
+            .withdraw-form button {
+                width: 100%;
+                justify-content: center;
+                padding: 12px;
+                font-size: 16px;
+            }
+
+            /* Stats grid: two columns still but smaller */
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 12px;
+            }
+            .stats-card {
+                padding: 14px 10px;
+            }
+            .stats-card .number {
+                font-size: 22px;
+            }
+            .stats-card .label {
+                font-size: 12px;
+            }
+
+            /* Transaction items */
+            .transaction-item {
+                flex-wrap: wrap;
+                gap: 8px;
+                padding: 10px 0;
+            }
+            .transaction-item > div:first-child {
+                flex: 1 1 60%;
+            }
+            .transaction-item > div:last-child {
+                flex: 1 1 30%;
+                text-align: right;
+            }
+            .transaction-item strong {
+                font-size: 14px;
+            }
+            .transaction-item .transaction-amount {
+                font-size: 14px;
+            }
+            .transaction-item span[style*="color: #6c757d"] {
+                font-size: 12px;
+                display: block;
+                margin-left: 0 !important;
+            }
+
+            .bottom {
+                padding: 14px 12px;
+                overflow-x: auto;
+            }
+            .bottom h3 {
+                font-size: 15px;
+            }
+
+            /* flash messages */
+            .alert {
+                padding: 10px 14px;
+                font-size: 13px;
+            }
+        }
+
+        /* 480px and below — small phones */
+        @media (max-width: 480px) {
+            .mobile-menu-toggle {
+                font-size: 24px;
+                padding: 6px 12px;
+                top: 8px;
+                left: 8px;
+            }
+            .right {
+                padding: 8px;
+                padding-top: 60px;
+            }
+            .Welcome_part h2 {
+                font-size: 16px;
+            }
+            .Welcome_part p {
+                font-size: 13px;
+            }
+
+            .wallet-balance-card {
+                padding: 16px;
+            }
+            .wallet-balance-card .balance {
+                font-size: 28px;
+            }
+            .wallet-balance-card .label {
+                font-size: 12px;
+            }
+            .withdraw-form input {
+                font-size: 14px;
+                padding: 10px;
+            }
+            .withdraw-form button {
+                font-size: 14px;
+                padding: 10px;
+            }
+
             .stats-grid {
                 grid-template-columns: 1fr;
+                gap: 10px;
+            }
+            .stats-card {
+                padding: 12px;
+            }
+            .stats-card .number {
+                font-size: 20px;
+            }
+            .stats-card .label {
+                font-size: 12px;
+            }
+
+            .transaction-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 4px;
+            }
+            .transaction-item > div:last-child {
+                text-align: left;
+                width: 100%;
+            }
+            .transaction-item span[style*="color: #6c757d"] {
+                margin-left: 0 !important;
+                display: inline;
+            }
+            .bottom h3 {
+                font-size: 14px;
+            }
+            .empty-state i {
+                font-size: 36px;
+            }
+            .empty-state p {
+                font-size: 16px;
+            }
+            .empty-state small {
+                font-size: 13px;
+            }
+        }
+
+        /* Touch-friendly targets */
+        @media (max-width: 768px) {
+            .menu-item,
+            .btn-submit,
+            .accept-btn,
+            .decline-btn,
+            .file-input-wrapper,
+            .withdraw-form button {
+                touch-action: manipulation;
+            }
+            .menu-item {
+                min-height: 44px;
+            }
+            .withdraw-form button {
+                min-height: 44px;
+            }
+            .withdraw-form input {
+                min-height: 44px;
             }
         }
     </style>
+    <!-- ====== END ADDED RESPONSIVE STYLES ====== -->
 </head>
 <body>
+
+    <!-- ====== ADDED: Mobile Menu Toggle + Overlay ====== -->
+    <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
+        <i class="bi bi-list"></i>
+    </button>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <!-- ====== END ADDED ====== -->
+
     <div class="Dashboard">
         <!-- Sidebar (same as tutor dashboard) -->
-        <div class="left">
+        <div class="left" id="sidebar">
             <div class="Header">
                 <div class="logo-circle"></div>
                 <h1>ZitConnect</h1>
@@ -213,5 +531,80 @@
             </div>
         </div>
     </div>
+
+    <!-- ====== ADDED: Mobile Menu Toggle JavaScript ====== -->
+    <script>
+        (function() {
+            'use strict';
+
+            var sidebar = document.getElementById('sidebar');
+            var overlay = document.getElementById('sidebarOverlay');
+            var toggleBtn = document.getElementById('mobileMenuToggle');
+            var isOpen = false;
+
+            function openMenu() {
+                sidebar.classList.add('open');
+                overlay.classList.add('active');
+                toggleBtn.innerHTML = '<i class="bi bi-x"></i>';
+                isOpen = true;
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeMenu() {
+                sidebar.classList.remove('open');
+                overlay.classList.remove('active');
+                toggleBtn.innerHTML = '<i class="bi bi-list"></i>';
+                isOpen = false;
+                document.body.style.overflow = '';
+            }
+
+            function toggleMenu() {
+                if (isOpen) {
+                    closeMenu();
+                } else {
+                    openMenu();
+                }
+            }
+
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', toggleMenu);
+            }
+
+            if (overlay) {
+                overlay.addEventListener('click', closeMenu);
+            }
+
+            // Close menu on window resize to desktop
+            var resizeTimer;
+            window.addEventListener('resize', function() {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(function() {
+                    if (window.innerWidth > 768 && isOpen) {
+                        closeMenu();
+                    }
+                }, 100);
+            });
+
+            // Close menu when a menu item is clicked (on mobile)
+            var menuItems = sidebar ? sidebar.querySelectorAll('.menu-item') : [];
+            menuItems.forEach(function(item) {
+                item.addEventListener('click', function() {
+                    if (window.innerWidth <= 768 && isOpen) {
+                        closeMenu();
+                    }
+                });
+            });
+
+            // Prevent body scroll when sidebar is open
+            document.addEventListener('touchmove', function(e) {
+                if (isOpen && !sidebar.contains(e.target) && e.target !== toggleBtn) {
+                    // Allow scrolling inside sidebar only
+                }
+            }, { passive: true });
+
+        })();
+    </script>
+    <!-- ====== END ADDED ====== -->
+
 </body>
 </html>

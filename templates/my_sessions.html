@@ -7,8 +7,53 @@
     <link rel="stylesheet" href="/static/css/tutor_dashboard.css">
     <link rel="stylesheet" href="/static/css/tutor_profile.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+
     <style>
-        /* Extra tab styles to match profile page */
+        /* -------- Mobile Menu Toggle Button -------- */
+        .mobile-menu-toggle {
+            display: none;
+            background: #1a3a5c;
+            color: #fff;
+            border: none;
+            font-size: 28px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            position: fixed;
+            top: 12px;
+            left: 12px;
+            z-index: 9999;
+            transition: background 0.2s;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            line-height: 1;
+        }
+        .mobile-menu-toggle:hover {
+            background: #0f2a44;
+        }
+        .mobile-menu-toggle i {
+            display: block;
+        }
+
+        /* -------- Sidebar Overlay (for mobile) -------- */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 9997;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        .sidebar-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* -------- Existing base styles (from original) -------- */
         .profile-tabs {
             display: flex;
             gap: 8px;
@@ -46,7 +91,6 @@
         .profile-tab-content.active {
             display: block;
         }
-        /* Session table overrides for consistency */
         .Container {
             display: grid;
             grid-template-columns: 2fr 1.5fr 1.2fr 1fr 1fr 1.2fr 1.5fr;
@@ -131,7 +175,6 @@
             margin-top: 8px;
             font-size: 14px;
         }
-        /* Group session cards */
         .group-session-card {
             background: #fff;
             border: 1px solid #e5e7eb;
@@ -175,24 +218,439 @@
             color: #6c757d;
             margin-top: 4px;
         }
-        @media (max-width: 768px) {
-            .Container, .session-row {
-                grid-template-columns: 1fr;
-                gap: 6px;
+
+        /* -------- Enhanced Mobile Responsiveness -------- */
+
+        /* 992px and below — tablet */
+        @media (max-width: 992px) {
+            .Dashboard {
+                grid-template-columns: 220px 1fr;
             }
-            .Container h3 { display: none; }
+            .left {
+                padding: 16px 0;
+            }
+            .Header h1 {
+                font-size: 20px;
+            }
+            .Header {
+                padding: 0 14px 14px 14px;
+            }
+            .menu-item {
+                padding: 10px 14px;
+                font-size: 14px;
+            }
+            .menu-icon {
+                font-size: 16px;
+                width: 22px;
+            }
+            .right {
+                padding: 14px;
+            }
+            .profile-tab-btn {
+                padding: 10px 16px;
+                font-size: 13px;
+            }
+            .profile-tab-btn i {
+                font-size: 16px;
+            }
+            .group-session-card {
+                padding: 14px 16px;
+            }
+            .group-session-card .info span {
+                font-size: 13px;
+            }
+        }
+
+        /* 768px and below — mobile large */
+        @media (max-width: 768px) {
+            .mobile-menu-toggle {
+                display: block;
+            }
+            .sidebar-overlay {
+                display: block;
+            }
+
+            .Dashboard {
+                grid-template-columns: 1fr;
+            }
+            .left {
+                position: fixed;
+                top: 0;
+                left: -280px;
+                width: 280px;
+                height: 100%;
+                z-index: 9998;
+                transition: left 0.3s ease;
+                overflow-y: auto;
+                box-shadow: 2px 0 12px rgba(0, 0, 0, 0.2);
+                padding: 20px 0;
+                background: #1a3a5c;
+            }
+            .left.open {
+                left: 0;
+            }
+            .left .Header {
+                padding: 0 16px 16px 16px;
+            }
+            .left .Header h1 {
+                font-size: 22px;
+            }
+            .menu-item {
+                padding: 12px 18px;
+                font-size: 15px;
+            }
+            .menu-item .menu-icon {
+                font-size: 18px;
+                width: 24px;
+            }
+            .logout-item {
+                margin-top: 16px;
+                padding-top: 16px;
+            }
+
+            .right {
+                padding: 12px;
+                min-height: 100vh;
+                padding-top: 70px;
+            }
+
+            .Welcome_part h2 {
+                font-size: 18px;
+            }
+            .Welcome_part p {
+                font-size: 14px;
+            }
+
+            /* Tabs: scrollable horizontally */
+            .profile-tabs {
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                gap: 4px;
+                padding-bottom: 4px;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: thin;
+            }
+            .profile-tabs::-webkit-scrollbar {
+                height: 3px;
+            }
+            .profile-tabs::-webkit-scrollbar-thumb {
+                background: #c1c7cd;
+                border-radius: 4px;
+            }
+            .profile-tab-btn {
+                flex: 0 0 auto;
+                padding: 10px 16px;
+                font-size: 13px;
+                white-space: nowrap;
+                border-bottom-width: 2px;
+            }
+            .profile-tab-btn i {
+                font-size: 14px;
+            }
+
+            /* -------- CARD LAYOUT FOR SESSION LIST (no horizontal scroll) -------- */
+            .bottom {
+                padding: 10px 4px;
+                overflow-x: visible; /* remove scroll */
+            }
+            .Container {
+                display: none; /* hide table header */
+            }
+            .session-row {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 4px 12px;
+                padding: 12px 14px;
+                margin-bottom: 10px;
+                background: #ffffff;
+                border-radius: 10px;
+                border: 1px solid #e5e7eb;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+                align-items: center;
+                transition: background 0.2s;
+            }
+            .session-row:hover {
+                background: #f8fafc;
+            }
+            .session-row span {
+                font-size: 13px;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                color: #1a1a1a;
+                padding: 2px 0;
+            }
+            .session-row span i {
+                width: 18px;
+                text-align: center;
+                font-size: 14px;
+                color: #495057;
+            }
+            /* Arrange items in a 2‑column grid with logical grouping */
+            .session-row span:nth-child(1) { /* Student */
+                grid-column: 1 / -1;
+                font-weight: 700;
+                font-size: 15px;
+                color: #1a3a5c;
+                border-bottom: 1px solid #f0f0f0;
+                padding-bottom: 6px;
+                margin-bottom: 4px;
+            }
+            .session-row span:nth-child(2) { /* Course */
+                grid-column: 1 / -1;
+                font-weight: 500;
+                color: #2c5f8a;
+                padding-bottom: 6px;
+                border-bottom: 1px solid #f0f0f0;
+                margin-bottom: 4px;
+            }
+            .session-row span:nth-child(3) { /* Date */
+                grid-column: 1 / 2;
+            }
+            .session-row span:nth-child(4) { /* Time */
+                grid-column: 2 / 3;
+            }
+            .session-row span:nth-child(5) { /* Type */
+                grid-column: 1 / 2;
+            }
+            .session-row span:nth-child(6) { /* Status */
+                grid-column: 2 / 3;
+                font-weight: 600;
+            }
+            .session-row span:nth-child(7) { /* Actions */
+                grid-column: 1 / -1;
+                display: flex;
+                justify-content: center;
+                margin-top: 6px;
+                padding-top: 8px;
+                border-top: 1px solid #e9ecef;
+            }
+            .session-row span:nth-child(7) .action-buttons {
+                justify-content: center;
+                width: 100%;
+            }
+            .session-row span:nth-child(7) .action-buttons form {
+                flex: 1;
+                max-width: 140px;
+            }
+            .session-row span:nth-child(7) .action-buttons button {
+                width: 100%;
+                justify-content: center;
+            }
+            /* Status colors remain */
+            .status-pending i, .status-confirmed i, .status-completed i, .status-cancelled i, .status-declined i {
+                margin-right: 4px;
+            }
+
+            /* Group session cards */
+            .group-session-card {
+                flex-direction: column;
+                align-items: stretch;
+                padding: 12px 14px;
+                gap: 10px;
+            }
             .group-session-card .info {
                 flex-direction: column;
                 align-items: flex-start;
+                gap: 8px;
+                width: 100%;
+            }
+            .group-session-card .info span {
+                font-size: 13px;
+                width: 100%;
+                justify-content: flex-start;
+                flex-wrap: wrap;
+            }
+            .group-session-card .badge {
+                font-size: 11px;
+                padding: 3px 10px;
+                align-self: flex-start;
+            }
+            .group-session-card > div:last-child {
+                width: 100%;
+                display: flex;
+                justify-content: flex-start;
+                margin-top: 4px;
+            }
+            .group-session-card .btn-submit {
+                padding: 6px 14px;
+                font-size: 12px;
+                width: auto;
+            }
+
+            /* Create group form */
+            #create-group .bottom {
+                padding: 16px !important;
+                overflow-x: hidden;
+            }
+            #create-group .bottom h3 {
+                font-size: 16px;
+            }
+            #create-group .bottom .form-group {
+                margin-bottom: 14px;
+            }
+            #create-group .bottom .form-group label {
+                font-size: 13px;
+            }
+            #create-group .bottom .form-group input,
+            #create-group .bottom .form-group select {
+                font-size: 13px;
+                padding: 8px 12px;
+            }
+            #create-group .bottom > div[style*="grid-template-columns"] {
+                grid-template-columns: 1fr !important;
+                gap: 12px !important;
+            }
+            #create-group .bottom .form-hint {
+                font-size: 12px;
+            }
+            .btn-submit {
+                width: 100%;
+                justify-content: center;
+                padding: 12px;
+                font-size: 14px;
+            }
+
+            .alert {
+                padding: 10px 14px;
+                font-size: 13px;
+            }
+        }
+
+        /* 480px and below — small phones */
+        @media (max-width: 480px) {
+            .mobile-menu-toggle {
+                font-size: 24px;
+                padding: 6px 12px;
+                top: 8px;
+                left: 8px;
+            }
+            .right {
+                padding: 8px;
+                padding-top: 60px;
+            }
+            .Welcome_part h2 {
+                font-size: 16px;
+            }
+            .Welcome_part p {
+                font-size: 13px;
+            }
+            .profile-tab-btn {
+                padding: 8px 12px;
+                font-size: 12px;
+            }
+            .profile-tab-btn i {
+                font-size: 13px;
+            }
+
+            .session-row {
+                padding: 10px 12px;
+                gap: 2px 10px;
+            }
+            .session-row span {
+                font-size: 12px;
+            }
+            .session-row span i {
+                font-size: 12px;
+                width: 16px;
+            }
+            .session-row span:nth-child(1) {
+                font-size: 14px;
+            }
+            .session-row span:nth-child(2) {
+                font-size: 13px;
+            }
+            .action-buttons {
                 gap: 6px;
+            }
+            .accept-btn, .decline-btn {
+                font-size: 10px;
+                padding: 4px 10px;
+            }
+            .group-session-card {
+                padding: 10px 12px;
+            }
+            .group-session-card .info span {
+                font-size: 12px;
+            }
+            .group-session-card .badge {
+                font-size: 10px;
+                padding: 2px 8px;
+            }
+            .group-session-card .btn-submit {
+                font-size: 11px;
+                padding: 5px 12px;
+            }
+
+            #create-group .bottom {
+                padding: 12px !important;
+            }
+            #create-group .bottom h3 {
+                font-size: 15px;
+            }
+            #create-group .bottom .form-group label {
+                font-size: 12px;
+            }
+            #create-group .bottom .form-group input,
+            #create-group .bottom .form-group select {
+                font-size: 12px;
+                padding: 6px 10px;
+            }
+            .btn-submit {
+                font-size: 13px;
+                padding: 10px;
+            }
+            .form-hint {
+                font-size: 11px;
+            }
+            .empty-state i {
+                font-size: 36px;
+            }
+            .empty-state p {
+                font-size: 16px;
+            }
+            .empty-state small {
+                font-size: 13px;
+            }
+        }
+
+        /* Touch-friendly targets */
+        @media (max-width: 768px) {
+            .menu-item,
+            .profile-tab-btn,
+            .btn-submit,
+            .accept-btn,
+            .decline-btn,
+            .file-input-wrapper {
+                touch-action: manipulation;
+            }
+            .menu-item {
+                min-height: 44px;
+            }
+            .accept-btn, .decline-btn {
+                min-height: 32px;
+                min-width: 44px;
+            }
+            .btn-submit {
+                min-height: 44px;
+            }
+            .profile-tab-btn {
+                min-height: 44px;
             }
         }
     </style>
 </head>
 <body>
+
+    <!-- Mobile Menu Toggle + Overlay -->
+    <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
+        <i class="bi bi-list"></i>
+    </button>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
     <div class="Dashboard">
-        <!-- Sidebar – same as tutor dashboard -->
-        <div class="left">
+        <!-- Sidebar -->
+        <div class="left" id="sidebar">
             <div class="Header">
                 <div class="logo-circle"></div>
                 <h1>ZitConnect</h1>
@@ -308,12 +766,11 @@
                 </div>
             </div>
 
-            <!-- Tab 2: Create Group Session (Updated) -->
+            <!-- Tab 2: Create Group Session -->
             <div id="create-group" class="profile-tab-content">
                 <div class="bottom" style="padding: 30px;">
                     <h3 style="margin-bottom:20px;"><i class="bi bi-plus-circle"></i> Create a New Group Session</h3>
                     <form action="/create-group-session" method="post" id="createGroupForm">
-                        <!-- Course -->
                         <div class="form-group" style="margin-bottom: 16px;">
                             <label for="courseCode">Course</label>
                             <select name="courseCode" id="courseCode" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd;">
@@ -324,7 +781,6 @@
                             </select>
                         </div>
 
-                        <!-- Date & Time -->
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
                             <div class="form-group">
                                 <label for="scheduledDate">Date</label>
@@ -336,7 +792,6 @@
                             </div>
                         </div>
 
-                        <!-- Capacity & Price -->
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px;">
                             <div class="form-group">
                                 <label for="maxCapacity">Max Students (1–100)</label>
@@ -348,7 +803,6 @@
                             </div>
                         </div>
 
-                        <!-- Meeting Platform (now includes Physical) -->
                         <div class="form-group" style="margin-top:16px;">
                             <label for="meetingPlatform">Meeting Platform</label>
                             <select name="meetingPlatform" id="meetingPlatform" required style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd;">
@@ -360,7 +814,6 @@
                             </select>
                         </div>
 
-                        <!-- Meeting Link (WhatsApp/Telegram group or any URL) -->
                         <div class="form-group" style="margin-top:16px;">
                             <label for="accessLink">Meeting Link (WhatsApp/Telegram group or other)</label>
                             <input type="url" name="accessLink" id="accessLink" placeholder="https://chat.whatsapp.com/... or https://t.me/..." required style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd;">
@@ -376,7 +829,7 @@
                 </div>
             </div>
 
-            <!-- Tab 3: My Group Sessions (Updated display) -->
+            <!-- Tab 3: My Group Sessions -->
             <div id="my-groups" class="profile-tab-content">
                 <div class="bottom" style="padding: 20px;">
                     <h3 style="margin-bottom:15px;"><i class="bi bi-people"></i> Group Sessions You Created</h3>
@@ -422,15 +875,81 @@
         </div>
     </div>
 
+    <!-- Mobile Menu Toggle JavaScript -->
+    <script>
+        (function() {
+            'use strict';
+
+            var sidebar = document.getElementById('sidebar');
+            var overlay = document.getElementById('sidebarOverlay');
+            var toggleBtn = document.getElementById('mobileMenuToggle');
+            var isOpen = false;
+
+            function openMenu() {
+                sidebar.classList.add('open');
+                overlay.classList.add('active');
+                toggleBtn.innerHTML = '<i class="bi bi-x"></i>';
+                isOpen = true;
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeMenu() {
+                sidebar.classList.remove('open');
+                overlay.classList.remove('active');
+                toggleBtn.innerHTML = '<i class="bi bi-list"></i>';
+                isOpen = false;
+                document.body.style.overflow = '';
+            }
+
+            function toggleMenu() {
+                if (isOpen) {
+                    closeMenu();
+                } else {
+                    openMenu();
+                }
+            }
+
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', toggleMenu);
+            }
+
+            if (overlay) {
+                overlay.addEventListener('click', closeMenu);
+            }
+
+            var resizeTimer;
+            window.addEventListener('resize', function() {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(function() {
+                    if (window.innerWidth > 768 && isOpen) {
+                        closeMenu();
+                    }
+                }, 100);
+            });
+
+            var menuItems = sidebar ? sidebar.querySelectorAll('.menu-item') : [];
+            menuItems.forEach(function(item) {
+                item.addEventListener('click', function() {
+                    if (window.innerWidth <= 768 && isOpen) {
+                        closeMenu();
+                    }
+                });
+            });
+
+            document.addEventListener('touchmove', function(e) {
+                if (isOpen && !sidebar.contains(e.target) && e.target !== toggleBtn) {
+                    // allow scrolling inside sidebar only
+                }
+            }, { passive: true });
+
+        })();
+    </script>
+
     <script>
     function switchTab(tabId) {
-        // Hide all tab contents
         document.querySelectorAll('.profile-tab-content').forEach(el => el.classList.remove('active'));
-        // Remove active class from all buttons
         document.querySelectorAll('.profile-tab-btn').forEach(btn => btn.classList.remove('active'));
-        // Show selected tab
         document.getElementById(tabId).classList.add('active');
-        // Activate the corresponding button (find by onclick)
         const buttons = document.querySelectorAll('.profile-tab-btn');
         buttons.forEach(btn => {
             if (btn.getAttribute('onclick').includes(tabId)) {
@@ -439,7 +958,6 @@
         });
     }
 
-    // Auto‑switch to tab from URL parameter on page load
     document.addEventListener('DOMContentLoaded', function() {
         const urlParams = new URLSearchParams(window.location.search);
         const tab = urlParams.get('tab');
@@ -453,7 +971,6 @@
             });
         }
     });
-</script>
-
+    </script>
 </body>
 </html>

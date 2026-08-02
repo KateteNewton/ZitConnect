@@ -131,21 +131,61 @@
     </div>
   </body>
   <script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const hamburger = document.getElementById('hamburgerBtn');
+    const sidebar = document.querySelector('.sidebar');
+    
+    // Create overlay if not exists
+    let overlay = document.querySelector('.sidebar-overlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.className = 'sidebar-overlay';
+      document.body.appendChild(overlay);
+    }
+
+    function toggleSidebar() {
+      sidebar.classList.toggle('open');
+      overlay.classList.toggle('active');
+      document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : '';
+    }
+
+    if (hamburger) {
+      hamburger.addEventListener('click', toggleSidebar);
+    } else {
+      console.warn('Hamburger button not found!');
+    }
+
+    overlay.addEventListener('click', function() {
+      sidebar.classList.remove('open');
+      overlay.classList.remove('active');
+      document.body.style.overflow = '';
+    });
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && sidebar.classList.contains('open')) {
+        sidebar.classList.remove('open');
+        overlay.classList.remove('active');
+        document.body.style.overflow = '';
+      }
+    });
+
+    // Notification badge update
     function updateStudentNotifCount() {
-        fetch('/api/unread-count')
-            .then(response => response.json())
-            .then(data => {
-                const badge = document.getElementById('student-notif-badge');
-                if (data.count > 0) {
-                    badge.textContent = data.count;
-                    badge.style.display = 'inline';
-                } else {
-                    badge.style.display = 'none';
-                }
-            })
-            .catch(err => console.log('Notification fetch error:', err));
+      fetch('/api/unread-count')
+        .then(response => response.json())
+        .then(data => {
+          const badge = document.getElementById('student-notif-badge');
+          if (data.count > 0) {
+            badge.textContent = data.count;
+            badge.style.display = 'inline';
+          } else {
+            badge.style.display = 'none';
+          }
+        })
+        .catch(err => console.log('Notification fetch error:', err));
     }
     setInterval(updateStudentNotifCount, 10000);
     updateStudentNotifCount();
+  });
 </script>
 </html>

@@ -89,7 +89,7 @@ def allowed_file(filename):
 
 @app.route('/')
 def home():
-    return render_template('register1.html')
+    return render_template('index.html')
 
 @app.route('/favicon.ico')
 def favicon():

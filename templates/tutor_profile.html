@@ -7,11 +7,484 @@
     <link rel="stylesheet" href="/static/css/tutor_dashboard.css">
     <link rel="stylesheet" href="/static/css/tutor_profile.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+
+    <!-- ====== ADDED: FULL MOBILE RESPONSIVE STYLES (no changes to existing logic) ====== -->
+    <style>
+        /* -------- Mobile Menu Toggle Button -------- */
+        .mobile-menu-toggle {
+            display: none;
+            background: #1a3a5c;
+            color: #fff;
+            border: none;
+            font-size: 28px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            position: fixed;
+            top: 12px;
+            left: 12px;
+            z-index: 9999;
+            transition: background 0.2s;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            line-height: 1;
+        }
+        .mobile-menu-toggle:hover {
+            background: #0f2a44;
+        }
+        .mobile-menu-toggle i {
+            display: block;
+        }
+
+        /* -------- Sidebar Overlay (for mobile) -------- */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 9997;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        .sidebar-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* -------- Existing profile styles (from tutor_profile.css) are already partly responsive,
+           but we add extra overrides for consistency -------- */
+
+        /* 992px and below — tablet */
+        @media (max-width: 992px) {
+            .Dashboard {
+                grid-template-columns: 220px 1fr;
+            }
+            .left {
+                padding: 16px 0;
+            }
+            .Header h1 {
+                font-size: 20px;
+            }
+            .Header {
+                padding: 0 14px 14px 14px;
+            }
+            .menu-item {
+                padding: 10px 14px;
+                font-size: 14px;
+            }
+            .menu-icon {
+                font-size: 16px;
+                width: 22px;
+            }
+            .right {
+                padding: 14px;
+            }
+            .profile-header {
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+                padding: 20px 16px;
+            }
+            .profile-header-info h1 {
+                font-size: 24px;
+            }
+            .form-row {
+                grid-template-columns: 1fr 1fr;
+                gap: 14px;
+            }
+            .courses-grid {
+                grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            }
+        }
+
+        /* 768px and below — mobile large */
+        @media (max-width: 768px) {
+            /* show hamburger */
+            .mobile-menu-toggle {
+                display: block;
+            }
+            .sidebar-overlay {
+                display: block;
+            }
+
+            /* Sidebar becomes slide-out panel */
+            .Dashboard {
+                grid-template-columns: 1fr;
+            }
+            .left {
+                position: fixed;
+                top: 0;
+                left: -280px;
+                width: 280px;
+                height: 100%;
+                z-index: 9998;
+                transition: left 0.3s ease;
+                overflow-y: auto;
+                box-shadow: 2px 0 12px rgba(0, 0, 0, 0.2);
+                padding: 20px 0;
+                background: #1a3a5c;
+            }
+            .left.open {
+                left: 0;
+            }
+            .left .Header {
+                padding: 0 16px 16px 16px;
+            }
+            .left .Header h1 {
+                font-size: 22px;
+            }
+            .menu-item {
+                padding: 12px 18px;
+                font-size: 15px;
+            }
+            .menu-item .menu-icon {
+                font-size: 18px;
+                width: 24px;
+            }
+            .logout-item {
+                margin-top: 16px;
+                padding-top: 16px;
+            }
+
+            /* main content */
+            .right {
+                padding: 12px;
+                min-height: 100vh;
+                padding-top: 70px;
+            }
+
+            .Welcome_part h2 {
+                font-size: 18px;
+            }
+
+            /* Tabs: scrollable horizontally */
+            .profile-tabs {
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                gap: 4px;
+                padding-bottom: 4px;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: thin;
+            }
+            .profile-tabs::-webkit-scrollbar {
+                height: 3px;
+            }
+            .profile-tabs::-webkit-scrollbar-thumb {
+                background: #c1c7cd;
+                border-radius: 4px;
+            }
+            .profile-tab-btn {
+                flex: 0 0 auto;
+                padding: 10px 16px;
+                font-size: 13px;
+                white-space: nowrap;
+                border-bottom-width: 2px;
+            }
+            .profile-tab-btn i {
+                font-size: 14px;
+            }
+
+            /* Profile header */
+            .profile-header {
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+                padding: 16px 12px;
+                gap: 16px;
+            }
+            .profile-pic {
+                width: 90px;
+                height: 90px;
+            }
+            .profile-pic i {
+                font-size: 44px;
+            }
+            .profile-header-info h1 {
+                font-size: 20px;
+            }
+            .profile-rating {
+                font-size: 14px;
+            }
+            .profile-rating i {
+                font-size: 15px;
+            }
+            .rating-value {
+                font-size: 12px;
+            }
+            .badge-status {
+                font-size: 12px;
+                padding: 6px 12px;
+            }
+
+            /* Form */
+            .profile-form {
+                padding: 16px;
+            }
+            .form-row {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+            .form-group label {
+                font-size: 13px;
+            }
+            .form-group input,
+            .form-group textarea {
+                font-size: 14px;
+                padding: 8px 12px;
+            }
+            .btn-submit {
+                width: 100%;
+                justify-content: center;
+                padding: 12px;
+                font-size: 14px;
+            }
+
+            /* Documents */
+            .upload-card {
+                padding: 16px;
+            }
+            .file-input-wrapper {
+                padding: 14px;
+            }
+            .file-input-wrapper i {
+                font-size: 26px;
+            }
+            .file-input-wrapper p {
+                font-size: 14px;
+            }
+            .file-input-wrapper small {
+                font-size: 12px;
+            }
+            .document-card {
+                flex-wrap: wrap;
+                padding: 12px;
+                gap: 10px;
+            }
+            .doc-icon {
+                font-size: 26px;
+            }
+            .doc-name {
+                font-size: 13px;
+            }
+            .doc-date {
+                font-size: 11px;
+            }
+            .status-badge {
+                font-size: 11px;
+                padding: 4px 10px;
+            }
+            .btn-view {
+                width: 30px;
+                height: 30px;
+                font-size: 14px;
+            }
+
+            /* Courses */
+            .courses-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+            }
+            .course-card {
+                padding: 14px;
+            }
+            .course-code {
+                font-size: 15px;
+            }
+            .course-name {
+                font-size: 12px;
+            }
+
+            .section-header h3 {
+                font-size: 16px;
+            }
+            .section-header p {
+                font-size: 13px;
+            }
+            .empty-state i {
+                font-size: 36px;
+            }
+            .empty-state p {
+                font-size: 15px;
+            }
+            .empty-state small {
+                font-size: 12px;
+            }
+
+            /* flash messages */
+            .alert {
+                padding: 10px 14px;
+                font-size: 13px;
+            }
+        }
+
+        /* 480px and below — small phones */
+        @media (max-width: 480px) {
+            .mobile-menu-toggle {
+                font-size: 24px;
+                padding: 6px 12px;
+                top: 8px;
+                left: 8px;
+            }
+            .right {
+                padding: 8px;
+                padding-top: 60px;
+            }
+            .Welcome_part h2 {
+                font-size: 16px;
+            }
+
+            .profile-pic {
+                width: 72px;
+                height: 72px;
+            }
+            .profile-pic i {
+                font-size: 36px;
+            }
+            .profile-header-info h1 {
+                font-size: 18px;
+            }
+            .badge-status {
+                font-size: 10px;
+                padding: 4px 10px;
+            }
+            .profile-rating {
+                font-size: 12px;
+            }
+            .profile-rating i {
+                font-size: 13px;
+            }
+            .rating-value {
+                font-size: 11px;
+            }
+
+            .profile-tab-btn {
+                padding: 8px 12px;
+                font-size: 12px;
+            }
+            .profile-tab-btn i {
+                font-size: 13px;
+            }
+
+            .profile-form {
+                padding: 12px;
+            }
+            .form-group input,
+            .form-group textarea {
+                font-size: 13px;
+                padding: 6px 10px;
+            }
+            .btn-submit {
+                font-size: 13px;
+                padding: 10px;
+            }
+
+            .upload-card {
+                padding: 12px;
+            }
+            .file-input-wrapper {
+                padding: 10px;
+            }
+            .file-input-wrapper i {
+                font-size: 22px;
+            }
+            .file-input-wrapper p {
+                font-size: 12px;
+            }
+            .file-input-wrapper small {
+                font-size: 10px;
+            }
+            .document-card {
+                padding: 10px;
+                gap: 8px;
+            }
+            .doc-name {
+                font-size: 12px;
+            }
+            .doc-date {
+                font-size: 10px;
+            }
+            .status-badge {
+                font-size: 10px;
+                padding: 3px 8px;
+            }
+            .btn-view {
+                width: 26px;
+                height: 26px;
+                font-size: 12px;
+            }
+
+            .courses-grid {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+            .course-card {
+                padding: 12px;
+            }
+            .course-code {
+                font-size: 14px;
+            }
+            .course-name {
+                font-size: 11px;
+            }
+            .section-header h3 {
+                font-size: 14px;
+            }
+            .section-header p {
+                font-size: 12px;
+            }
+            .empty-state i {
+                font-size: 30px;
+            }
+            .empty-state p {
+                font-size: 14px;
+            }
+            .empty-state small {
+                font-size: 11px;
+            }
+        }
+
+        /* Touch-friendly targets */
+        @media (max-width: 768px) {
+            .menu-item,
+            .profile-tab-btn,
+            .btn-submit,
+            .btn-view,
+            .pic-upload-btn,
+            .file-input-wrapper {
+                touch-action: manipulation;
+            }
+            .menu-item {
+                min-height: 44px;
+            }
+            .profile-tab-btn {
+                min-height: 44px;
+            }
+            .btn-submit {
+                min-height: 44px;
+            }
+            .pic-upload-btn {
+                min-height: 44px;
+                padding: 8px 16px;
+            }
+        }
+    </style>
+    <!-- ====== END ADDED RESPONSIVE STYLES ====== -->
 </head>
 <body>
+
+    <!-- ====== ADDED: Mobile Menu Toggle + Overlay ====== -->
+    <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
+        <i class="bi bi-list"></i>
+    </button>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <!-- ====== END ADDED ====== -->
+
     <div class="Dashboard">
         <!-- Sidebar -->
-        <div class="left">
+        <div class="left" id="sidebar">
             <div class="Header">
                 <div class="logo-circle"></div>
                 <h1>ZitConnect</h1>
@@ -236,6 +709,80 @@
         </div>
     </div>
 
+    <!-- ====== ADDED: Mobile Menu Toggle JavaScript ====== -->
+    <script>
+        (function() {
+            'use strict';
+
+            var sidebar = document.getElementById('sidebar');
+            var overlay = document.getElementById('sidebarOverlay');
+            var toggleBtn = document.getElementById('mobileMenuToggle');
+            var isOpen = false;
+
+            function openMenu() {
+                sidebar.classList.add('open');
+                overlay.classList.add('active');
+                toggleBtn.innerHTML = '<i class="bi bi-x"></i>';
+                isOpen = true;
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeMenu() {
+                sidebar.classList.remove('open');
+                overlay.classList.remove('active');
+                toggleBtn.innerHTML = '<i class="bi bi-list"></i>';
+                isOpen = false;
+                document.body.style.overflow = '';
+            }
+
+            function toggleMenu() {
+                if (isOpen) {
+                    closeMenu();
+                } else {
+                    openMenu();
+                }
+            }
+
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', toggleMenu);
+            }
+
+            if (overlay) {
+                overlay.addEventListener('click', closeMenu);
+            }
+
+            // Close menu on window resize to desktop
+            var resizeTimer;
+            window.addEventListener('resize', function() {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(function() {
+                    if (window.innerWidth > 768 && isOpen) {
+                        closeMenu();
+                    }
+                }, 100);
+            });
+
+            // Close menu when a menu item is clicked (on mobile)
+            var menuItems = sidebar ? sidebar.querySelectorAll('.menu-item') : [];
+            menuItems.forEach(function(item) {
+                item.addEventListener('click', function() {
+                    if (window.innerWidth <= 768 && isOpen) {
+                        closeMenu();
+                    }
+                });
+            });
+
+            // Prevent body scroll when sidebar is open
+            document.addEventListener('touchmove', function(e) {
+                if (isOpen && !sidebar.contains(e.target) && e.target !== toggleBtn) {
+                    // Allow scrolling inside sidebar only
+                }
+            }, { passive: true });
+
+        })();
+    </script>
+    <!-- ====== END ADDED ====== -->
+
     <script>
         function switchTab(tabName) {
             const contents = document.querySelectorAll('.profile-tab-content');
@@ -245,7 +792,13 @@
             buttons.forEach(btn => btn.classList.remove('active'));
 
             document.getElementById(tabName).classList.add('active');
-            event.target.closest('.profile-tab-btn').classList.add('active');
+            // Find the clicked button by matching onclick attribute
+            buttons.forEach(btn => {
+                const onclick = btn.getAttribute('onclick');
+                if (onclick && onclick.includes(tabName)) {
+                    btn.classList.add('active');
+                }
+            });
         }
 
         // Handle profile picture upload with preview
