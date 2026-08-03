@@ -1,0 +1,310 @@
+/* SYSTEM RESET */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    margin: 0;
+    font-family: 'Source Sans 3', sans-serif;
+    background: #f8fafc; /* Clean off-white background used in standard dashboard systems */
+    color: #1a1c1e;
+    display: flex;
+    min-height: 100vh;
+}
+
+/* FIXED LEFT SIDEBAR GRID */
+.sidebar {
+    width: 260px;
+    background: #1a3a5c;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 100;
+}
+
+.sidebar-brand {
+    height: 70px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.logo {
+    width: 36px;
+    height: 36px;
+    background: white;
+    color: #1a3a5c;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 50%;
+    font-weight: 700;
+    font-size: 15px;
+}
+
+.brand-name {
+    font-family: 'Libre Franklin', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.sidebar-menu {
+    display: flex;
+    flex-direction: column;
+    padding: 24px 0;
+    gap: 4px;
+}
+
+.sidebar-menu a {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 24px;
+    color: rgba(255, 255, 255, 0.7);
+    text-decoration: none;
+    font-size: 16px;
+    font-weight: 600;
+    transition: all 0.15s ease-in-out;
+}
+
+.sidebar-menu a:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: white;
+}
+
+.sidebar-menu a.active {
+    background: rgba(255, 255, 255, 0.12);
+    color: white;
+    border-left: 4px solid #ffffff;
+    padding-left: 20px;
+}
+
+.sidebar-menu .material-symbols-outlined {
+    font-size: 24px;
+}
+
+/* MAIN BODY RIGGING */
+.app-content {
+    flex: 1;
+    margin-left: 260px; /* Forces screen alignment to step out past sidebar frame */
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+/* TOP HEADER ROW */
+.topbar {
+    position: sticky;
+    top: 0;
+    height: 70px;
+    background: #1a3a5c;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 40px;
+    color: white;
+    z-index: 90;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+.topbar h1 {
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 22px;
+    font-weight: 600;
+}
+
+.topbar .right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.icon {
+    cursor: pointer;
+    font-size: 24px;
+}
+
+/* Fixed Avatar Box to display image natively */
+.avatar-container {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.avatar {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* MAIN VIEW PANEL (Clean Dashboard Spacing) */
+.container {
+    padding: 40px;
+    display: flex;
+    justify-content: flex-start;
+}
+
+/* Limit size to avoid card stretching uncontrollably on huge monitors */
+.content-limiter {
+    width: 100%;
+    max-width: 900px;
+}
+
+.section-title {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #64748b;
+    margin: 24px 0 12px;
+    font-weight: 700;
+}
+
+/* CONTAINER PANELS FOR NOTIFICATIONS */
+.card {
+    background: white;
+    border-radius: 8px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 12px;
+    position: relative;
+    cursor: pointer;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.card.unread {
+    border-left: 4px solid #1a3a5c;
+}
+
+/* Circle mask wrapper preventing image clipping bugs */
+.avatar-container-md {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f1f5f9;
+    flex-shrink: 0;
+}
+
+.avatar-md {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.icon-box {
+    width: 42px;
+    height: 42px;
+    background: #f1f5f9;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.icon-box .material-symbols-outlined {
+    font-size: 20px;
+}
+
+/* INNER TEXT RULES */
+.content {
+    flex: 1;
+}
+
+.content p {
+    margin: 0 0 2px 0;
+    font-size: 15px;
+    color: #334155;
+    line-height: 1.4;
+}
+
+.content b {
+    color: #0f172a;
+}
+
+.content small {
+    color: #94a3b8;
+    font-size: 13px;
+}
+
+.highlight {
+    color: #1a3a5c;
+    font-weight: 600;
+}
+
+.dot {
+    width: 8px;
+    height: 8px;
+    background: #1a3a5c;
+    border-radius: 50%;
+    margin-left: 12px;
+    flex-shrink: 0;
+}
+
+/* ALL CAUGHT UP STATE BOX */
+.empty {
+    margin-top: 32px;
+    background: white;
+    padding: 40px;
+    text-align: center;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.check {
+    width: 50px;
+    height: 50px;
+    background: #f0fdf4;
+    margin: 0 auto 16px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.empty h3 {
+    color: #0f172a;
+    margin-bottom: 6px;
+    font-size: 18px;
+}
+
+.empty p {
+    color: #64748b;
+    font-size: 14px;
+    margin-bottom: 20px;
+}
+
+.empty button {
+    background: #1a3a5c;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.empty button:hover {
+    background: #142d48;
+}

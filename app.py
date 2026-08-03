@@ -2868,5 +2868,14 @@ def internal_error(error):
 
 # ============ Main ============
 
+@app.route('/notifications')
+def notifications():
+    return render_template('notifications.html')
+
+@app.route('/browse')
+def browse():
+    return render_template('browse_sessions.html')
+
+
 if __name__ == '__main__':
     app.run(debug=True)

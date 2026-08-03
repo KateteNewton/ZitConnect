@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Group Session - ZitConnect</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@600;700&family=Source+Sans+3:wght@400;600&family=Material+Symbols+Outlined:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/create_group_session.css">
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <div class="logo">zc</div>
+            <div class="brand-text">
+                <span class="brand-name">ZitConnect</span>
+                <span class="brand-sub">Tutor Portal</span>
+            </div>
+        </div>
+        <nav class="sidebar-menu">
+            <a href="/">
+                <span class="material-symbols-outlined">dashboard</span>
+                <span>Dashboard</span>
+            </a>
+            <a href="#">
+                <span class="material-symbols-outlined">calendar_today</span>
+                <span>My Sessions</span>
+            </a>
+            <a class="active" href="#">
+                <span class="material-symbols-outlined">groups</span>
+                <span>Group Sessions</span>
+            </a>
+            <a href="#">
+                <span class="material-symbols-outlined">person</span>
+                <span>Profile</span>
+            </a>
+        </nav>
+    </aside>
+
+    <div class="app-content">
+
+        <header class="mobile-topbar">
+            <div class="left">
+                <button class="back-btn" aria-label="Go back">
+                    <span class="material-symbols-outlined">arrow_back</span>
+                </button>
+                <h1>Create Group Session</h1>
+            </div>
+            <div class="logo-circle-mobile">zc</div>
+        </header>
+
+        <main class="container">
+            <div class="content-limiter">
+
+                <div class="desktop-header">
+                    <nav class="breadcrumbs">
+                        <a href="#">Group Sessions</a>
+                        <span>/</span>
+                        <span class="current">Create New</span>
+                    </nav>
+                    <h2 class="page-title">Create Group Session</h2>
+                    <p class="page-subtitle">Schedule a new collaborative session for your students.</p>
+                </div>
+
+                <form id="session-form" class="form-layout">
+                    
+                    <section class="card">
+                        <label class="section-title">Course Selection</label>
+                        <div class="select-wrapper">
+                            <select required>
+                                <option disabled selected value="">Select a subject...</option>
+                                <option value="math">Advanced Mathematics - Calculus III</option>
+                                <option value="physics">Introductory Quantum Mechanics</option>
+                                <option value="history">World History: Industrial Era</option>
+                                <option value="cs">Computer Science: Data Structures</option>
+                            </select>
+                            <span class="material-symbols-outlined select-icon">unfold_more</span>
+                        </div>
+                    </section>
+
+                    <section class="card">
+                        <h3 class="card-heading">Schedule</h3>
+                        <div class="grid-inputs">
+                            <div class="input-group">
+                                <label class="section-title">Date</label>
+                                <input type="date" required />
+                            </div>
+                            <div class="input-group">
+                                <label class="section-title">Start Time</label>
+                                <input type="time" required />
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="card">
+                        <div class="grid-inputs">
+                            <div class="input-group">
+                                <label class="section-title">Maximum Students (Max 20)</label>
+                                <input type="number" min="1" max="20" placeholder="e.g. 10" required />
+                            </div>
+                            <div class="input-group">
+                                <label class="section-title">Price per Student</label>
+                                <div class="currency-wrapper">
+                                    <span class="currency-symbol">K</span>
+                                    <input type="number" step="0.01" placeholder="0.00" required />
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="card">
+                        <h3 class="card-heading">Meeting Platform</h3>
+                        <div class="platform-grid">
+                            <label class="platform-option">
+                                <input type="radio" name="platform" value="zoom" required />
+                                <div class="platform-box">
+                                    <span class="material-symbols-outlined">videocam</span>
+                                    <span>Zoom</span>
+                                </div>
+                            </label>
+                            <label class="platform-option">
+                                <input type="radio" name="platform" value="meet" required />
+                                <div class="platform-box">
+                                    <span class="material-symbols-outlined">groups</span>
+                                    <span>Google Meet</span>
+                                </div>
+                            </label>
+                            <label class="platform-option">
+                                <input type="radio" name="platform" value="teams" required />
+                                <div class="platform-box">
+                                    <span class="material-symbols-outlined">meeting_room</span>
+                                    <span>Teams</span>
+                                </div>
+                            </label>
+                        </div>
+                    </section>
+
+                    <section class="card">
+                        <label class="section-title">Meeting Link</label>
+                        <div class="link-wrapper">
+                            <span class="material-symbols-outlined link-icon">link</span>
+                            <input type="url" placeholder="https://meet.google.com/..." required />
+                        </div>
+                        <p class="field-hint">The link will be shared with enrolled students 15 minutes before the session starts.</p>
+                    </section>
+
+                    <div class="info-banner">
+                        <div class="banner-content">
+                            <h4>Collaborative Learning</h4>
+                            <p>Group sessions increase engagement by 40% compared to private tutoring. Host up to 20 students in a single session.</p>
+                        </div>
+                        <span class="material-symbols-outlined banner-bg-icon">school</span>
+                    </div>
+
+                </form>
+            </div>
+        </main>
+
+        <footer class="bottom-footer">
+            <div class="footer-limiter">
+                <button type="submit" form="session-form" class="submit-btn">
+                    <span class="material-symbols-outlined">check_circle</span>
+                    <span class="btn-text">Create Session</span>
+                </button>
+            </div>
+        </footer>
+
+    </div>
+
+    <script>
+        // Interactive state handlers for custom platform cards
+        const platformInputs = document.querySelectorAll('input[name="platform"]');
+        platformInputs.forEach(input => {
+            input.addEventListener('change', () => {
+                platformInputs.forEach(i => i.parentElement.classList.remove('selected'));
+                if (input.checked) {
+                    input.parentElement.classList.add('selected');
+                }
+            });
+        });
+
+        // Form interception async simulation logic
+        const form = document.getElementById('session-form');
+        const submitBtn = document.querySelector('.submit-btn');
+        const btnText = submitBtn.querySelector('.btn-text');
+        const btnIcon = submitBtn.querySelector('.material-symbols-outlined');
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            // Lock form state
+            submitBtn.disabled = true;
+            btnIcon.textContent = 'sync';
+            btnIcon.classList.add('animate-spin');
+            btnText.textContent = 'Processing...';
+
+            setTimeout(() => {
+                // Done states
+                btnIcon.classList.remove('animate-spin');
+                btnIcon.textContent = 'task_alt';
+                btnText.textContent = 'Session Published!';
+                submitBtn.classList.add('success');
+
+                setTimeout(() => {
+                    // Reset standard positions
+                    submitBtn.disabled = false;
+                    submitBtn.classList.remove('success');
+                    btnIcon.textContent = 'check_circle';
+                    btnText.textContent = 'Create Session';
+                    form.reset();
+                    platformInputs.forEach(i => i.parentElement.classList.remove('selected'));
+                }, 3000);
+            }, 1500);
+        });
+    </script>
+
+</body>
+</html>
