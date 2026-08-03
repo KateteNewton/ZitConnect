@@ -7,11 +7,245 @@
     <link rel="stylesheet" href="/static/css/admin_dashboard.css">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+
+    <!-- ====== RESPONSIVE STYLES (matching admin_dashboard_main.html) ====== -->
+    <style>
+        /* -------- Mobile Menu Toggle Button -------- */
+        .mobile-menu-toggle {
+            display: none;
+            background: #1a3a5c;
+            color: #fff;
+            border: none;
+            font-size: 28px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            position: fixed;
+            top: 12px;
+            left: 12px;
+            z-index: 9999;
+            transition: background 0.2s;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            line-height: 1;
+        }
+        .mobile-menu-toggle:hover {
+            background: #0f2a44;
+        }
+        .mobile-menu-toggle i {
+            display: block;
+        }
+
+        /* -------- Sidebar Overlay (for mobile) -------- */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 9997;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        .sidebar-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* -------- Prevent horizontal overflow -------- */
+        body {
+            overflow-x: hidden;
+            margin: 0;
+            padding: 0;
+        }
+        .Dashboard, .right {
+            overflow-x: hidden;
+        }
+
+        /* 992px and below — tablet */
+        @media (max-width: 992px) {
+            .Dashboard {
+                grid-template-columns: 220px 1fr;
+            }
+            .left {
+                padding: 16px 0;
+            }
+            .Header h1 {
+                font-size: 20px;
+            }
+            .Header {
+                padding: 0 14px 14px 14px;
+            }
+            .menu-item {
+                padding: 10px 14px;
+                font-size: 14px;
+            }
+            .menu-icon {
+                font-size: 16px;
+                width: 22px;
+            }
+            .right {
+                padding: 14px;
+            }
+        }
+
+        /* 768px and below — mobile large */
+        @media (max-width: 768px) {
+            .mobile-menu-toggle {
+                display: block;
+            }
+            .sidebar-overlay {
+                display: block;
+            }
+
+            .Dashboard {
+                grid-template-columns: 1fr;
+            }
+            .left {
+                position: fixed;
+                top: 0;
+                left: -280px;
+                width: 280px;
+                height: 100%;
+                z-index: 9998;
+                transition: left 0.3s ease;
+                overflow-y: auto;
+                box-shadow: 2px 0 12px rgba(0, 0, 0, 0.2);
+                padding: 20px 0;
+                background: #1a3a5c;
+            }
+            .left.open {
+                left: 0;
+            }
+            .left .Header {
+                padding: 0 16px 16px 16px;
+            }
+            .left .Header h1 {
+                font-size: 22px;
+            }
+            .menu-item {
+                padding: 12px 18px;
+                font-size: 15px;
+            }
+            .menu-item .menu-icon {
+                font-size: 18px;
+                width: 24px;
+            }
+            .logout-item {
+                margin-top: 16px;
+                padding-top: 16px;
+            }
+
+            .right {
+                padding: 12px;
+                min-height: 100vh;
+                padding-top: 70px;
+            }
+
+            .Welcome_part h2 {
+                font-size: 18px;
+            }
+
+            /* Sub-tabs wrap on small screens */
+            .sub-tabs {
+                flex-wrap: wrap;
+                gap: 4px;
+            }
+            .sub-tab {
+                padding: 10px 14px;
+                font-size: 13px;
+            }
+
+            /* Table: horizontal scroll */
+            .bottom {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            .sessions-table {
+                min-width: 600px;
+                font-size: 13px;
+            }
+            .sessions-table th,
+            .sessions-table td {
+                padding: 8px 10px;
+                font-size: 12px;
+                white-space: nowrap;
+            }
+            .accept-btn, .decline-btn {
+                font-size: 11px;
+                padding: 5px 10px;
+            }
+            .action-buttons {
+                flex-wrap: nowrap;
+                gap: 6px;
+            }
+            .alert {
+                padding: 10px 14px;
+                font-size: 13px;
+            }
+        }
+
+        /* 480px and below — small phones */
+        @media (max-width: 480px) {
+            .mobile-menu-toggle {
+                font-size: 24px;
+                padding: 6px 12px;
+                top: 8px;
+                left: 8px;
+            }
+            .right {
+                padding: 8px;
+                padding-top: 60px;
+            }
+            .Welcome_part h2 {
+                font-size: 16px;
+            }
+            .sessions-table {
+                min-width: 520px;
+                font-size: 11px;
+            }
+            .sessions-table th,
+            .sessions-table td {
+                padding: 6px 8px;
+                font-size: 10px;
+            }
+            .sub-tab {
+                padding: 8px 10px;
+                font-size: 12px;
+            }
+        }
+
+        /* Touch-friendly targets */
+        @media (max-width: 768px) {
+            .menu-item,
+            .accept-btn,
+            .decline-btn {
+                touch-action: manipulation;
+            }
+            .menu-item {
+                min-height: 44px;
+            }
+        }
+
+        .sessions-table thead th {
+            white-space: nowrap;
+        }
+    </style>
+    <!-- ====== END RESPONSIVE STYLES ====== -->
 </head>
 <body>
+
+    <!-- ====== Mobile Menu Toggle + Overlay ====== -->
+    <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
+        <i class="bi bi-list"></i>
+    </button>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
     <div class="Dashboard">
         <!-- LEFT SIDEBAR -->
-        <div class="left">
+        <div class="left" id="sidebar">
             <div class="Header">
                 <div class="logo-circle"></div>
                 <h1>ZitConnect</h1>
@@ -166,6 +400,79 @@
             });
             event.target.classList.add('active');
         }
+    </script>
+
+    <!-- ====== Mobile Menu Toggle JavaScript ====== -->
+    <script>
+        (function() {
+            'use strict';
+
+            var sidebar = document.getElementById('sidebar');
+            var overlay = document.getElementById('sidebarOverlay');
+            var toggleBtn = document.getElementById('mobileMenuToggle');
+            var isOpen = false;
+
+            function openMenu() {
+                sidebar.classList.add('open');
+                overlay.classList.add('active');
+                toggleBtn.innerHTML = '<i class="bi bi-x"></i>';
+                isOpen = true;
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeMenu() {
+                sidebar.classList.remove('open');
+                overlay.classList.remove('active');
+                toggleBtn.innerHTML = '<i class="bi bi-list"></i>';
+                isOpen = false;
+                document.body.style.overflow = '';
+            }
+
+            function toggleMenu() {
+                if (isOpen) {
+                    closeMenu();
+                } else {
+                    openMenu();
+                }
+            }
+
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', toggleMenu);
+            }
+
+            if (overlay) {
+                overlay.addEventListener('click', closeMenu);
+            }
+
+            // Close menu on window resize to desktop
+            var resizeTimer;
+            window.addEventListener('resize', function() {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(function() {
+                    if (window.innerWidth > 768 && isOpen) {
+                        closeMenu();
+                    }
+                }, 100);
+            });
+
+            // Close menu when a menu item is clicked (on mobile)
+            var menuItems = sidebar ? sidebar.querySelectorAll('.menu-item') : [];
+            menuItems.forEach(function(item) {
+                item.addEventListener('click', function() {
+                    if (window.innerWidth <= 768 && isOpen) {
+                        closeMenu();
+                    }
+                });
+            });
+
+            // Prevent body scroll when sidebar is open
+            document.addEventListener('touchmove', function(e) {
+                if (isOpen && !sidebar.contains(e.target) && e.target !== toggleBtn) {
+                    // Allow scrolling inside sidebar only
+                }
+            }, { passive: true });
+
+        })();
     </script>
 </body>
 </html>
