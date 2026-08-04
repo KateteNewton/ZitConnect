@@ -10,10 +10,6 @@
   <body>
     {% include 'student_nav.html' %}
 
-
-    <body>
-    {% include 'student_nav.html' %}
-
     <div class="page-wrapper">
       <div class="sidebar">
         <div class="sidebar-profile">
@@ -24,33 +20,32 @@
         </div>
         <ul class="sidebar-menu">
           <li>
-            <a href="/student-dashboard" >
+            <a href="/student-dashboard">
               <i class="fas fa-home"></i>
               <span>Home</span>
             </a>
           </li>
           <li>
-            <a href="/upcoming-sessions">
+            <a href="/upcoming-sessions" class="active">
               <i class="fas fa-calendar-check"></i>
               <span>Sessions</span>
             </a>
           </li>
-        <li>
-          <a href="/student-profile">
-            <i class="fas fa-user-circle"></i>
-            <span>Profile</span>
-          </a>
-        </li>
-        <li>
-          <a href="/logout">
-            <i class="fas fa-sign-out-alt"></i>
-            <span>Logout</span>
-          </a>
-        </li>
+          <li>
+            <a href="/student-profile">
+              <i class="fas fa-user-circle"></i>
+              <span>Profile</span>
+            </a>
+          </li>
+          <li>
+            <a href="/logout">
+              <i class="fas fa-sign-out-alt"></i>
+              <span>Logout</span>
+            </a>
+          </li>
         </ul>
       </div>
 
-    <div class="main-container">
       <div class="content">
         <div class="content-wrapper" style="max-width: 800px;">
           <div class="card-header">
@@ -86,5 +81,7 @@
         </div>
       </div>
     </div>
+
+    <script src="/static/js/student_common.js"></script>
   </body>
 </html>

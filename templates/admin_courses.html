@@ -1,3 +1,4 @@
+<!-- ==================== admin_courses.html ==================== -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,11 +8,102 @@
     <link rel="stylesheet" href="/static/css/admin_dashboard.css">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <style>
+        /* Additional course-specific styles (non-conflicting) */
+        .school-edit-form {
+            display: inline-block;
+            margin-left: 8px;
+        }
+        .school-edit-form input {
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            font-size: 13px;
+            margin-right: 4px;
+        }
+        .school-edit-form button {
+            padding: 4px 12px;
+            border-radius: 4px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .btn-school-edit {
+            background: #ffc107;
+            color: #000;
+        }
+        .btn-school-save {
+            background: #28a745;
+            color: white;
+        }
+        .btn-school-cancel {
+            background: #6c757d;
+            color: white;
+        }
+        .edit-course-btn {
+            background: none;
+            border: none;
+            color: #ffc107;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 0 6px;
+        }
+        .edit-course-btn:hover {
+            color: #d39e00;
+        }
+        .btn-save {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 6px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .btn-save:hover {
+            background: #1e7e34;
+        }
+        .btn-cancel {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 6px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .btn-cancel:hover {
+            background: #5a6268;
+        }
+        #addSchoolForm,
+        #addCourseForm {
+            background: #fff;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+            border: 1px solid #e5e7eb;
+        }
+        #addSchoolForm input,
+        #addCourseForm input,
+        #addCourseForm select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+        }
+    </style>
 </head>
 <body>
+
+    <!-- ===== MOBILE MENU TOGGLE + OVERLAY ===== -->
+    <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
+        <i class="bi bi-list"></i>
+    </button>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
     <div class="Dashboard">
-        <!-- LEFT SIDEBAR -->
-        <div class="left">
+        <!-- SIDEBAR -->
+        <div class="left" id="sidebar">
             <div class="Header">
                 <div class="logo-circle"></div>
                 <h1>ZitConnect</h1>
@@ -42,7 +134,7 @@
             </a>
         </div>
 
-        <!-- RIGHT SIDE -->
+        <!-- MAIN CONTENT -->
         <div class="right">
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
@@ -56,8 +148,98 @@
                 <h2>Course Manager</h2>
             </div>
 
+            <!-- High Demand + Quick Actions -->
+            <div class="dashboard-cards">
+                <div class="card">
+                    <h3 style="color: #1a3a5c; font-size: 16px; display: flex; align-items: center; gap: 8px;">
+                        <i class="bi bi-bar-chart-fill" style="color: #f4a62a;"></i> High-Demand Courses
+                    </h3>
+                    {% if high_demand and high_demand|length > 0 %}
+                        <ul style="list-style: none; padding: 0; margin: 0;">
+                            {% for course in high_demand %}
+                                <li style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f0f0f0;">
+                                    <span><strong>{{ course[0] }}</strong> – {{ course[1] }}</span>
+                                    <span style="background: #e7f3ff; padding: 2px 10px; border-radius: 12px; font-size: 13px; color: #49709c;">
+                                        {{ course[2] }} request{{ 's' if course[2] != 1 else '' }}
+                                    </span>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p style="color: #6c757d;">No session data yet.</p>
+                    {% endif %}
+                </div>
+
+                <div class="card">
+                    <h3 style="color: #1a3a5c; font-size: 16px; display: flex; align-items: center; gap: 8px;">
+                        <i class="bi bi-info-circle"></i> Quick Actions
+                    </h3>
+                    <p style="color: #6c757d; font-size: 14px; margin-bottom: 12px;">Add new items, or click <i class="bi bi-pencil"></i> to edit.</p>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button onclick="document.getElementById('addSchoolForm').style.display='block'; document.getElementById('addCourseForm').style.display='none';" class="btn-submit" style="background: #2c5f8a; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                            <i class="bi bi-building-add"></i> Add School
+                        </button>
+                        <button onclick="document.getElementById('addCourseForm').style.display='block'; document.getElementById('addSchoolForm').style.display='none';" class="btn-submit" style="background: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                            <i class="bi bi-plus-circle"></i> Add Course
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ADD SCHOOL -->
+            <div id="addSchoolForm" style="display: none;">
+                <h4 style="margin-bottom: 16px;"><i class="bi bi-building-add"></i> Add New School</h4>
+                <form action="/admin/add-school" method="post">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <div>
+                            <label for="schoolName" style="display: block; font-weight: 600; margin-bottom: 4px;">School Name</label>
+                            <input type="text" name="schoolName" id="schoolName" placeholder="e.g. School of Engineering" required>
+                        </div>
+                        <div>
+                            <label for="schoolCode" style="display: block; font-weight: 600; margin-bottom: 4px;">School Code</label>
+                            <input type="text" name="schoolCode" id="schoolCode" placeholder="e.g. SOE" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-submit" style="margin-top: 16px; background: #2c5f8a; color: white; border: none; padding: 10px 24px; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                        <i class="bi bi-check-lg"></i> Add School
+                    </button>
+                    <button type="button" onclick="document.getElementById('addSchoolForm').style.display='none';" style="margin-left: 12px; background: none; border: none; color: #6c757d; cursor: pointer;">Cancel</button>
+                </form>
+            </div>
+
+            <!-- ADD COURSE -->
+            <div id="addCourseForm" style="display: none;">
+                <h4 style="margin-bottom: 16px;"><i class="bi bi-plus-circle"></i> Add New Course</h4>
+                <form action="/admin/add-course" method="post">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+                        <div>
+                            <label for="courseCode" style="display: block; font-weight: 600; margin-bottom: 4px;">Course Code</label>
+                            <input type="text" name="courseCode" id="courseCode" placeholder="e.g. CS101" required>
+                        </div>
+                        <div>
+                            <label for="courseName" style="display: block; font-weight: 600; margin-bottom: 4px;">Course Name</label>
+                            <input type="text" name="courseName" id="courseName" placeholder="e.g. Intro to Programming" required>
+                        </div>
+                        <div>
+                            <label for="schoolID" style="display: block; font-weight: 600; margin-bottom: 4px;">School</label>
+                            <select name="schoolID" id="schoolID" required>
+                                <option value="">Select School</option>
+                                {% for school in schools %}
+                                    <option value="{{ school[0] }}">{{ school[1] }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-submit" style="margin-top: 16px; background: #28a745; color: white; border: none; padding: 10px 24px; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                        <i class="bi bi-check-lg"></i> Add Course
+                    </button>
+                    <button type="button" onclick="document.getElementById('addCourseForm').style.display='none';" style="margin-left: 12px; background: none; border: none; color: #6c757d; cursor: pointer;">Cancel</button>
+                </form>
+            </div>
+
+            <!-- COURSES TABLE -->
             <div class="users-table-container">
-                <table class="users-table">
+                <table class="users-table" id="coursesTable">
                     <thead>
                         <tr>
                             <th>#</th>
@@ -65,28 +247,169 @@
                             <th>Course Name</th>
                             <th>School</th>
                             <th>Enrolled Tutors</th>
+                            <th style="text-align: center;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% if all_courses and all_courses|length > 0 %}
                             {% for course in all_courses %}
-                                <tr>
+                                <tr id="course-row-{{ course.courseCode }}" class="course-row">
                                     <td>{{ loop.index }}</td>
-                                    <td><strong><i class="bi bi-code-square"></i> {{ course.courseCode }}</strong></td>
-                                    <td><i class="bi bi-book"></i> {{ course.courseName }}</td>
-                                    <td><i class="bi bi-building"></i> {{ course.schoolName }}</td>
+                                    <td><strong><i class="bi bi-code-square"></i> <span class="course-code-display">{{ course.courseCode }}</span></strong></td>
+                                    <td><i class="bi bi-book"></i> <span class="course-name-display">{{ course.courseName }}</span></td>
+                                    <td><i class="bi bi-building"></i> <span class="course-school-display">{{ course.schoolName }}</span></td>
                                     <td><i class="bi bi-people"></i> {{ course.tutor_count|default(0) }}</td>
+                                    <td style="text-align: center; white-space: nowrap;">
+                                        <button class="edit-course-btn" data-code="{{ course.courseCode }}" title="Edit Course">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <form action="/admin/delete-course/{{ course.courseCode }}" method="post" style="display: inline-block;" onsubmit="return confirm('Are you sure you want to delete this course? This cannot be undone.')">
+                                            <button type="submit" style="background: none; border: none; color: #dc3545; cursor: pointer; font-size: 16px;" title="Delete Course">
+                                                <i class="bi bi-trash3"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                <!-- Edit row -->
+                                <tr id="edit-row-{{ course.courseCode }}" class="edit-form-row" style="display: none;">
+                                    <td colspan="6">
+                                        <form action="/admin/edit-course/{{ course.courseCode }}" method="post" style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+                                            <input type="text" name="courseCode" value="{{ course.courseCode }}" style="flex: 1; min-width: 100px;" placeholder="Course Code" required>
+                                            <input type="text" name="courseName" value="{{ course.courseName }}" style="flex: 2; min-width: 150px;" placeholder="Course Name" required>
+                                            <select name="schoolID" style="flex: 1; min-width: 120px;" required>
+                                                {% for school in schools %}
+                                                    <option value="{{ school[0] }}" {% if school[1] == course.schoolName %}selected{% endif %}>{{ school[1] }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            <button type="submit" class="btn-save"><i class="bi bi-check-lg"></i> Save</button>
+                                            <button type="button" class="btn-cancel" onclick="cancelEditCourse('{{ course.courseCode }}')"><i class="bi bi-x-lg"></i> Cancel</button>
+                                        </form>
+                                    </td>
                                 </tr>
                             {% endfor %}
                         {% else %}
-                            <tr>
-                                <td colspan="5" style="text-align: center;">No courses found.</td>
-                            </tr>
+                            <tr><td colspan="6" style="text-align: center;">No courses found.</td></tr>
                         {% endif %}
                     </tbody>
                 </table>
             </div>
+
+            <!-- SCHOOLS LIST -->
+            <div style="margin-top: 24px; background: #fff; border-radius: 12px; padding: 16px; border: 1px solid #e5e7eb;">
+                <h4 style="margin-bottom: 12px;"><i class="bi bi-building"></i> Schools</h4>
+                <div id="schoolsContainer" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
+                    {% for school in schools %}
+                        <div id="school-chip-{{ school[0] }}" class="school-chip">
+                            <span class="school-display"><strong>{{ school[1] }}</strong> ({{ school[0] }})</span>
+                            <span class="edit-icon" onclick="toggleSchoolEdit({{ school[0] }}, '{{ school[1] }}', '{{ school[0] }}')" title="Edit School"><i class="bi bi-pencil"></i></span>
+                            <form action="/admin/delete-school/{{ school[0] }}" method="post" style="display: inline-block;" onsubmit="return confirm('Are you sure you want to delete this school? This cannot be undone.')">
+                                <button type="submit" style="background: none; border: none; color: #dc3545; cursor: pointer; font-size: 14px; padding: 0;" title="Delete School">
+                                    <i class="bi bi-x-circle"></i>
+                                </button>
+                            </form>
+                            <div id="school-edit-{{ school[0] }}" style="display: none; margin-left: 8px;">
+                                <form action="/admin/edit-school/{{ school[0] }}" method="post" style="display: inline-block;">
+                                    <input type="text" name="schoolName" value="{{ school[1] }}" style="width: 120px; padding: 4px 8px; border-radius: 4px; border: 1px solid #ddd; font-size: 13px;" placeholder="Name" required>
+                                    <input type="text" name="schoolCode" value="{{ school[0] }}" style="width: 80px; padding: 4px 8px; border-radius: 4px; border: 1px solid #ddd; font-size: 13px;" placeholder="Code" required>
+                                    <button type="submit" class="btn-school-save" style="padding: 4px 12px; border-radius: 4px; border: none; cursor: pointer; font-weight: 600;"><i class="bi bi-check-lg"></i></button>
+                                    <button type="button" class="btn-school-cancel" style="padding: 4px 12px; border-radius: 4px; border: none; cursor: pointer; font-weight: 600;" onclick="cancelSchoolEdit({{ school[0] }})"><i class="bi bi-x-lg"></i></button>
+                                </form>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
         </div>
     </div>
+
+    <script>
+        // ===== COURSE EDIT =====
+        document.querySelectorAll('.edit-course-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var code = this.dataset.code;
+                var row = document.getElementById('course-row-' + code);
+                var editRow = document.getElementById('edit-row-' + code);
+                document.querySelectorAll('.edit-form-row').forEach(function(r) { r.style.display = 'none'; });
+                if (editRow.style.display === 'none') {
+                    editRow.style.display = 'table-row';
+                    row.style.display = 'none';
+                } else {
+                    editRow.style.display = 'none';
+                    row.style.display = 'table-row';
+                }
+            });
+        });
+
+        function cancelEditCourse(code) {
+            document.getElementById('edit-row-' + code).style.display = 'none';
+            document.getElementById('course-row-' + code).style.display = 'table-row';
+        }
+
+        // ===== SCHOOL EDIT =====
+        function toggleSchoolEdit(id, name, code) {
+            var chip = document.getElementById('school-chip-' + id);
+            var displaySpan = chip.querySelector('.school-display');
+            var editDiv = document.getElementById('school-edit-' + id);
+            document.querySelectorAll('.school-edit-form').forEach(function(el) { el.style.display = 'none'; });
+            if (editDiv.style.display === 'none') {
+                displaySpan.style.display = 'none';
+                editDiv.style.display = 'inline-block';
+                editDiv.querySelector('input[name="schoolName"]').value = name;
+                editDiv.querySelector('input[name="schoolCode"]').value = code;
+            } else {
+                displaySpan.style.display = 'inline';
+                editDiv.style.display = 'none';
+            }
+        }
+
+        function cancelSchoolEdit(id) {
+            var chip = document.getElementById('school-chip-' + id);
+            chip.querySelector('.school-display').style.display = 'inline';
+            document.getElementById('school-edit-' + id).style.display = 'none';
+        }
+
+        // ===== MOBILE MENU =====
+        (function() {
+            var sidebar = document.getElementById('sidebar');
+            var overlay = document.getElementById('sidebarOverlay');
+            var toggleBtn = document.getElementById('mobileMenuToggle');
+            var isOpen = false;
+
+            function openMenu() {
+                sidebar.classList.add('open');
+                overlay.classList.add('active');
+                toggleBtn.innerHTML = '<i class="bi bi-x"></i>';
+                isOpen = true;
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeMenu() {
+                sidebar.classList.remove('open');
+                overlay.classList.remove('active');
+                toggleBtn.innerHTML = '<i class="bi bi-list"></i>';
+                isOpen = false;
+                document.body.style.overflow = '';
+            }
+
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', function() {
+                    isOpen ? closeMenu() : openMenu();
+                });
+            }
+            if (overlay) {
+                overlay.addEventListener('click', closeMenu);
+            }
+
+            window.addEventListener('resize', function() {
+                if (window.innerWidth > 768 && isOpen) closeMenu();
+            });
+
+            document.querySelectorAll('.menu-item').forEach(function(item) {
+                item.addEventListener('click', function() {
+                    if (window.innerWidth <= 768 && isOpen) closeMenu();
+                });
+            });
+        })();
+    </script>
 </body>
 </html>

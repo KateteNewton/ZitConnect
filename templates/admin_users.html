@@ -1,3 +1,4 @@
+<!-- ==================== admin_users.html ==================== -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -9,9 +10,16 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
 </head>
 <body>
+
+    <!-- ===== MOBILE MENU TOGGLE + OVERLAY ===== -->
+    <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
+        <i class="bi bi-list"></i>
+    </button>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
     <div class="Dashboard">
-        <!-- LEFT SIDEBAR -->
-        <div class="left">
+        <!-- SIDEBAR -->
+        <div class="left" id="sidebar">
             <div class="Header">
                 <div class="logo-circle"></div>
                 <h1>ZitConnect</h1>
@@ -42,7 +50,7 @@
             </a>
         </div>
 
-        <!-- RIGHT SIDE -->
+        <!-- MAIN CONTENT -->
         <div class="right">
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
@@ -61,7 +69,7 @@
                 <button class="sub-tab" onclick="showSubTab('students')">Students</button>
             </div>
 
-            <!-- Tutors List -->
+            <!-- Tutors -->
             <div id="tutors-subsection" class="sub-section active">
                 <div class="users-table-container">
                     <table class="users-table">
@@ -104,16 +112,14 @@
                                     </tr>
                                 {% endfor %}
                             {% else %}
-                                <tr>
-                                    <td colspan="7" style="text-align: center;">No tutors found.</td>
-                                </tr>
+                                <tr><td colspan="7" style="text-align: center;">No tutors found.</td></tr>
                             {% endif %}
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            <!-- Students List -->
+            <!-- Students -->
             <div id="students-subsection" class="sub-section">
                 <div class="users-table-container">
                     <table class="users-table">
@@ -138,9 +144,7 @@
                                     </tr>
                                 {% endfor %}
                             {% else %}
-                                <tr>
-                                    <td colspan="5" style="text-align: center;">No students found.</td>
-                                </tr>
+                                <tr><td colspan="5" style="text-align: center;">No students found.</td></tr>
                             {% endif %}
                         </tbody>
                     </table>
@@ -154,30 +158,73 @@
             document.getElementById('tutors-subsection').classList.remove('active');
             document.getElementById('students-subsection').classList.remove('active');
             document.getElementById(tabName + '-subsection').classList.add('active');
-            
-            document.querySelectorAll('.sub-tab').forEach(btn => {
+
+            document.querySelectorAll('.sub-tab').forEach(function(btn) {
                 btn.classList.remove('active');
             });
             event.target.classList.add('active');
         }
-        
+
         function viewTutorDetails(tutorID) {
             fetch('/admin/tutor-details/' + tutorID)
                 .then(response => response.json())
                 .then(data => {
                     alert('Tutor Details:\n\n' +
-                          'Name: ' + data.fullName + '\n' +
-                          'Username: ' + data.userName + '\n' +
-                          'Email: ' + data.email + '\n' +
-                          'Status: ' + data.verificationStatus + '\n' +
-                          'Rating: ' + data.averageRating + '\n' +
-                          'Bio: ' + (data.bio || 'No bio provided'));
+                        'Name: ' + data.fullName + '\n' +
+                        'Username: ' + data.userName + '\n' +
+                        'Email: ' + data.email + '\n' +
+                        'Status: ' + data.verificationStatus + '\n' +
+                        'Rating: ' + data.averageRating + '\n' +
+                        'Bio: ' + (data.bio || 'No bio provided'));
                 })
                 .catch(error => {
                     console.error('Error:', error);
                     alert('Error loading tutor details');
                 });
         }
+
+        // ===== MOBILE MENU =====
+        (function() {
+            var sidebar = document.getElementById('sidebar');
+            var overlay = document.getElementById('sidebarOverlay');
+            var toggleBtn = document.getElementById('mobileMenuToggle');
+            var isOpen = false;
+
+            function openMenu() {
+                sidebar.classList.add('open');
+                overlay.classList.add('active');
+                toggleBtn.innerHTML = '<i class="bi bi-x"></i>';
+                isOpen = true;
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeMenu() {
+                sidebar.classList.remove('open');
+                overlay.classList.remove('active');
+                toggleBtn.innerHTML = '<i class="bi bi-list"></i>';
+                isOpen = false;
+                document.body.style.overflow = '';
+            }
+
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', function() {
+                    isOpen ? closeMenu() : openMenu();
+                });
+            }
+            if (overlay) {
+                overlay.addEventListener('click', closeMenu);
+            }
+
+            window.addEventListener('resize', function() {
+                if (window.innerWidth > 768 && isOpen) closeMenu();
+            });
+
+            document.querySelectorAll('.menu-item').forEach(function(item) {
+                item.addEventListener('click', function() {
+                    if (window.innerWidth <= 768 && isOpen) closeMenu();
+                });
+            });
+        })();
     </script>
 </body>
 </html>

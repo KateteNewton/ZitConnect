@@ -1,54 +1,56 @@
+<!-- ==================== admin_profile.html ==================== -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ZitConnect - Admin Profile</title>
-    <link rel="stylesheet" href="/static/css/tutor_dashboard.css">
     <link rel="stylesheet" href="/static/css/admin_dashboard.css">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
 </head>
 <body>
+
+    <!-- ===== MOBILE MENU TOGGLE + OVERLAY ===== -->
+    <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
+        <i class="bi bi-list"></i>
+    </button>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
     <div class="Dashboard">
-        <!-- LEFT SIDEBAR -->
-        <div class="left">
+        <!-- SIDEBAR -->
+        <div class="left" id="sidebar">
             <div class="Header">
                 <div class="logo-circle"></div>
                 <h1>ZitConnect</h1>
             </div>
-            <div style="flex: 1;">
-                <a href="/admin" class="menu-item">
-                    <i class="material-icons menu-icon">dashboard</i>
-                    <span>Dashboard</span>
-                </a>
-                <a href="/admin/users" class="menu-item">
-                    <i class="material-icons menu-icon">group</i>
-                    <span>Manage Users</span>
-                </a>
-                <a href="/admin/verification" class="menu-item">
-                    <i class="material-icons menu-icon">verified</i>
-                    <span>Tutor Verification</span>
-                </a>
-                <a href="/admin/courses" class="menu-item">
-                    <i class="material-icons menu-icon">bar_chart</i>
-                    <span>Course Manager</span>
-                </a>
-            
-                <a href="/admin/profile" class="menu-item logout-item active">
-                    <i class="material-icons menu-icon">person</i>
-                    <span>Profile</span>
-                </a>
-            </div>
-            <div>
-                <a href="/logout" class="menu-item logout-item">
-                    <i class="bi bi-box-arrow-right menu-icon"></i>
-                    
-                    <span>Logout</span>
-                </a>
-            </div>
+            <a href="/admin" class="menu-item">
+                <i class="bi bi-speedometer2 menu-icon"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="/admin/users" class="menu-item">
+                <i class="bi bi-people-fill menu-icon"></i>
+                <span>Users</span>
+            </a>
+            <a href="/admin/verification" class="menu-item">
+                <i class="bi bi-patch-check-fill menu-icon"></i>
+                <span>Verification</span>
+            </a>
+            <a href="/admin/courses" class="menu-item">
+                <i class="bi bi-book-fill menu-icon"></i>
+                <span>Course Management</span>
+            </a>
+            <a href="/admin/profile" class="menu-item active">
+                <i class="bi bi-person-circle menu-icon"></i>
+                <span>Profile</span>
+            </a>
+            <a href="/logout" class="menu-item logout-item">
+                <i class="bi bi-box-arrow-right menu-icon"></i>
+                <span>Logout</span>
+            </a>
         </div>
 
-        <!-- RIGHT SIDE -->
+        <!-- MAIN CONTENT -->
         <div class="right">
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
@@ -62,8 +64,9 @@
                 <h2>Admin Profile</h2>
             </div>
 
-            <div class="card" style="max-width: 600px; text-align: left; margin: 0 auto;">
-                <h3>Profile Information</h3>
+            <!-- Profile Information Card -->
+            <div class="profile-card" style="background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; padding: 24px; max-width: 600px; margin: 0 auto 24px auto;">
+                <h3 style="color: #1a3a5c; font-size: 18px; margin-bottom: 20px; font-weight: 600;">Profile Information</h3>
                 <div style="margin-top: 20px;">
                     <p><strong>Full Name:</strong> {{ fullName or 'Admin User' }}</p>
                     <p><strong>Role:</strong> Administrator</p>
@@ -72,9 +75,83 @@
                     <p><strong>Permissions:</strong> User Management, Verification, Course Management</p>
                 </div>
                 <hr style="margin: 20px 0; border-color: #e5e7eb;">
-                <a href="/logout" class="action-btn view" style="text-decoration: none; display: inline-block;">Logout</a>
+                <a href="/logout" class="action-btn view" style="text-decoration: none; display: inline-block; padding: 8px 20px;">Logout</a>
             </div>
+
+            <!-- Add Admin User Card -->
+            <div class="profile-card" style="background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; padding: 24px; max-width: 600px; margin: 0 auto;">
+                <h3 style="color: #1a3a5c; font-size: 18px; margin-bottom: 20px; font-weight: 600;">
+                    <i class="bi bi-person-plus"></i> Add New Admin User
+                </h3>
+                <form action="/admin/add-admin" method="post">
+                    <div style="margin-bottom: 16px;">
+                        <label for="fullName" style="display: block; font-weight: 600; margin-bottom: 4px; color: #1a3a5c;">Full Name</label>
+                        <input type="text" name="fullName" id="fullName" placeholder="e.g. John Doe" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ddd; font-size: 14px;">
+                    </div>
+                    <div style="margin-bottom: 16px;">
+                        <label for="email" style="display: block; font-weight: 600; margin-bottom: 4px; color: #1a3a5c;">Email Address</label>
+                        <input type="email" name="email" id="email" placeholder="admin@example.com" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ddd; font-size: 14px;">
+                    </div>
+                    <div style="margin-bottom: 16px;">
+                        <label for="password" style="display: block; font-weight: 600; margin-bottom: 4px; color: #1a3a5c;">Password</label>
+                        <input type="password" name="password" id="password" placeholder="Enter password" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ddd; font-size: 14px;">
+                    </div>
+                    <div style="margin-bottom: 20px;">
+                        <label for="confirmPassword" style="display: block; font-weight: 600; margin-bottom: 4px; color: #1a3a5c;">Confirm Password</label>
+                        <input type="password" name="confirmPassword" id="confirmPassword" placeholder="Re-enter password" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ddd; font-size: 14px;">
+                    </div>
+                    <button type="submit" class="btn-submit" style="background: #2c5f8a; color: white; border: none; padding: 10px 24px; border-radius: 6px; cursor: pointer; font-weight: 600; width: 100%;">
+                        <i class="bi bi-check-lg"></i> Add Admin
+                    </button>
+                </form>
+            </div>
+
         </div>
     </div>
+
+    <script>
+        // ===== MOBILE MENU =====
+        (function() {
+            var sidebar = document.getElementById('sidebar');
+            var overlay = document.getElementById('sidebarOverlay');
+            var toggleBtn = document.getElementById('mobileMenuToggle');
+            var isOpen = false;
+
+            function openMenu() {
+                sidebar.classList.add('open');
+                overlay.classList.add('active');
+                toggleBtn.innerHTML = '<i class="bi bi-x"></i>';
+                isOpen = true;
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeMenu() {
+                sidebar.classList.remove('open');
+                overlay.classList.remove('active');
+                toggleBtn.innerHTML = '<i class="bi bi-list"></i>';
+                isOpen = false;
+                document.body.style.overflow = '';
+            }
+
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', function() {
+                    isOpen ? closeMenu() : openMenu();
+                });
+            }
+            if (overlay) {
+                overlay.addEventListener('click', closeMenu);
+            }
+
+            window.addEventListener('resize', function() {
+                if (window.innerWidth > 768 && isOpen) closeMenu();
+            });
+
+            document.querySelectorAll('.menu-item').forEach(function(item) {
+                item.addEventListener('click', function() {
+                    if (window.innerWidth <= 768 && isOpen) closeMenu();
+                });
+            });
+        })();
+    </script>
 </body>
 </html>
