@@ -3,6 +3,8 @@ import json
 import requests
 import re
 import uuid
+import hmac
+import hashlib
 from flask import Flask, jsonify, render_template, request, redirect, session, flash, url_for
 from flask_mysqldb import MySQL
 from datetime import timedelta, datetime, date
@@ -32,6 +34,10 @@ LENCO_BASE_URL = "https://api.lenco.co/access/v2/"
 LENCO_SECRET_KEY = os.getenv("LENCO_SECRET_KEY")
 LENCO_PUBLIC_KEY = os.getenv("LENCO_PUBLIC_KEY")
 LENCO_SIGNATURE = os.getenv("LENCO_SIGNATURE")
+# Your Lenco business account's 36-char UUID — the account payouts are debited FROM.
+# Get this once from GET https://api.lenco.co/access/v2/accounts and put it in your .env
+# as LENCO_ACCOUNT_ID=<uuid>. This is NOT a tutor's ID — it's your own platform account.
+LENCO_ACCOUNT_ID = os.getenv("LENCO_ACCOUNT_ID")
 
 # Payment simulation mode – set to False when real credentials work
 SIMULATE_PAYMENT = False
@@ -2296,6 +2302,167 @@ def join_session(groupSessionID):
         flash(f'Error joining session: {str(e)}', 'error')
         return redirect('/group-sessions')
     
+def finalize_successful_payment(payment_id):
+    """
+    Single source of truth for 'a payment just succeeded'.
+    Called from the SIMULATE_PAYMENT branch, the /webhook/lenco handler,
+    and the /payment/verify/<id> poller — so all three real-time paths
+    behave identically.
+
+    - Marks the payment 'successful' exactly once (idempotent: safe to call
+      more than once for the same payment, e.g. if the webhook AND the poll
+      both fire).
+    - Unlocks the group session / bumps enrolledCount.
+    - Credits the tutor's wallet with 90% of the amount (10% platform fee),
+      creating the wallet row if it doesn't exist yet.
+    - Notifies both the student and the tutor.
+
+    Returns True on success, False on failure (nothing is partially applied
+    thanks to the transaction).
+    """
+    cursor = mysql.connection.cursor()
+    try:
+        # Only transition pending/failed -> successful once. rowcount tells us
+        # whether *this* call is the one that actually made the change, so we
+        # never double-credit the wallet if two triggers fire for one payment.
+        cursor.execute(
+            "UPDATE payment SET paymentStatus = 'successful' "
+            "WHERE paymentID = %s AND paymentStatus != 'successful'",
+            (payment_id,)
+        )
+        already_processed = cursor.rowcount == 0
+
+        cursor.execute(
+            "SELECT groupSessionID, studentID, amount FROM payment WHERE paymentID = %s",
+            (payment_id,)
+        )
+        row = cursor.fetchone()
+        if not row:
+            mysql.connection.rollback()
+            cursor.close()
+            return False
+
+        group_session_id, student_id, amount = row[0], row[1], row[2]
+
+        if already_processed:
+            # Already handled by an earlier call (webhook already ran, etc.)
+            mysql.connection.commit()
+            cursor.close()
+            return True
+
+        # Unlock the session for the student who paid
+        cursor.execute("""
+            UPDATE groupsession
+            SET enrolledCount = enrolledCount + 1, accessLinkUnlocked = 1
+            WHERE groupSessionID = %s
+        """, (group_session_id,))
+
+        # Find the tutor who owns this group session
+        cursor.execute("""
+            SELECT s.tutorID FROM groupsession g
+            JOIN session s ON g.groupSessionID = s.sessionID
+            WHERE g.groupSessionID = %s
+        """, (group_session_id,))
+        tutor_row = cursor.fetchone()
+
+        if tutor_row and tutor_row[0]:
+            tutor_id = tutor_row[0]
+            tutor_earnings = float(amount) * 0.9  # 10% platform commission
+
+            # Credit (or create) the tutor's wallet in the same transaction
+            cursor.execute("""
+                INSERT INTO wallet (tutorID, availableBalance, totalWithdrawn)
+                VALUES (%s, %s, 0)
+                ON DUPLICATE KEY UPDATE availableBalance = availableBalance + %s
+            """, (tutor_id, tutor_earnings, tutor_earnings))
+
+            cursor.execute(
+                "INSERT INTO notification (userID, message) VALUES (%s, %s)",
+                (tutor_id, f'You earned K{tutor_earnings:.2f} from a session payment.')
+            )
+
+        if student_id:
+            cursor.execute(
+                "INSERT INTO notification (userID, message) VALUES (%s, %s)",
+                (student_id, 'Your payment was successful! You can now join the session.')
+            )
+
+        mysql.connection.commit()
+        cursor.close()
+        return True
+
+    except Exception as e:
+        mysql.connection.rollback()
+        cursor.close()
+        print(f"❌ Error finalizing payment {payment_id}: {e}")
+        return False
+
+
+def finalize_payout(reference, status, reason=None):
+    """
+    Idempotently resolves a payout by its Lenco reference — called from the
+    /withdraw response, the webhook (transfer.successful / transfer.failed),
+    and the /payout/verify poller, same pattern as finalize_successful_payment.
+
+    Funds are reserved (deducted from wallet.availableBalance) the moment the
+    withdrawal is initiated, so:
+    - status='successful' -> nothing more to move, just record + notify.
+    - status='failed'     -> refund the reserved amount back to the wallet.
+    Safe to call more than once for the same reference.
+    """
+    cursor = mysql.connection.cursor()
+    try:
+        cursor.execute(
+            "UPDATE payout SET payoutStatus = %s, reasonForFailure = %s "
+            "WHERE reference = %s AND payoutStatus = 'pending'",
+            (status, reason, reference)
+        )
+        if cursor.rowcount == 0:
+            # Already resolved by an earlier call, or unknown reference
+            mysql.connection.commit()
+            cursor.close()
+            return
+
+        cursor.execute(
+            "SELECT tutorID, amount FROM payout WHERE reference = %s",
+            (reference,)
+        )
+        row = cursor.fetchone()
+        if not row:
+            mysql.connection.rollback()
+            cursor.close()
+            return
+        tutor_id, amount = row[0], float(row[1])
+
+        if status == 'failed':
+            cursor.execute("""
+                UPDATE wallet
+                SET availableBalance = availableBalance + %s,
+                    totalWithdrawn = totalWithdrawn - %s
+                WHERE tutorID = %s
+            """, (amount, amount, tutor_id))
+            msg = f'Your withdrawal of K{amount:.2f} failed and has been refunded to your wallet.'
+            if reason:
+                msg += f' Reason: {reason}'
+            cursor.execute(
+                "INSERT INTO notification (userID, message) VALUES (%s, %s)",
+                (tutor_id, msg)
+            )
+        else:
+            cursor.execute(
+                "INSERT INTO notification (userID, message) VALUES (%s, %s)",
+                (tutor_id, f'Your withdrawal of K{amount:.2f} was successful.')
+            )
+
+        mysql.connection.commit()
+        cursor.close()
+
+    except Exception as e:
+        mysql.connection.rollback()
+        cursor.close()
+        print(f"❌ Error finalizing payout {reference}: {e}")
+
+
 @app.route('/payment/<int:paymentID>', methods=['GET', 'POST'])
 def payment_page(paymentID):
     if 'userID' not in session or session.get('role') != 'student':
@@ -2320,14 +2487,10 @@ def payment_page(paymentID):
     row = cursor.fetchone()
     cursor.close()
 
+
     if not row:
         flash('Payment record not found.', 'error')
         return redirect('/student-dashboard')
-    
-    response = requests.post(url, json=payload, headers=headers, timeout=30)
-    print("STATUS CODE:", response.status_code)
-    print("RAW RESPONSE:", repr(response.text))
-    result = response.json()
 
     payment = {
         'paymentID': row[0],
@@ -2356,19 +2519,15 @@ def payment_page(paymentID):
         if SIMULATE_PAYMENT:
             try:
                 cursor = mysql.connection.cursor()
-                # Mark payment successful
                 cursor.execute(
-                    "UPDATE payment SET paymentStatus = 'successful', transactionID = %s WHERE paymentID = %s",
+                    "UPDATE payment SET transactionID = %s WHERE paymentID = %s",
                     (f"SIM-{uuid.uuid4().hex[:8].upper()}", paymentID)
                 )
-                # Unlock session and increment enrollment
-                cursor.execute("""
-                    UPDATE groupsession 
-                    SET enrolledCount = enrolledCount + 1, accessLinkUnlocked = 1 
-                    WHERE groupSessionID = %s
-                """, (payment['groupSessionID'],))
                 mysql.connection.commit()
                 cursor.close()
+
+                finalize_successful_payment(paymentID)
+                payment['paymentStatus'] = 'successful'
 
                 flash('Payment successful! You can now join the session.', 'success')
                 return render_template('group_payment.html', payment=payment, payment_success=True)
@@ -2376,166 +2535,212 @@ def payment_page(paymentID):
                 flash(f'Simulation error: {str(e)}', 'error')
                 return render_template('group_payment.html', payment=payment)
 
-        if request.method == 'POST':
-    # --- REAL PAYMENT (SIMULATE_PAYMENT is False) ---
-            phone_number = request.form.get('phone_number', '').strip()
-            operator = request.form.get('operator', '').strip()
+        # --- REAL PAYMENT (SIMULATE_PAYMENT is False) ---
+        phone_number = request.form.get('phone_number', '').strip()
+        operator = request.form.get('operator', '').strip()
 
-    if not phone_number or not operator:
-        flash('Please enter your mobile money number and select your network.', 'error')
-        return render_template('group_payment.html', payment=payment)
-
-    if not re.match(r'^(09|07)\d{8}$', phone_number):
-        flash('Please enter a valid Zambian mobile number (e.g., 0977123456).', 'error')
-        return render_template('group_payment.html', payment=payment)
-
-    try:
-        reference = f"ZIT-{uuid.uuid4().hex[:8].upper()}"
-        url = f"{LENCO_BASE_URL}collections/mobile-money"
-
-        # Headers – only what's required
-        headers = {
-            'Authorization': f'Bearer {LENCO_SECRET_KEY}',
-            'accept': 'application/json',
-            'content-type': 'application/json'
-        }
-
-        payload = {
-            "reference": reference,
-            "amount": float(payment['amount']),
-            "currency": "ZMW",
-            "operator": operator,          # 'airtel', 'mtn', or 'zamtel'
-            "phone": phone_number,
-            "country": "zm",
-            "bearer": "customer"
-        }
-
-        # --- Debug output ---
-        print("\n🔍 Sending to Lenco:")
-        print(f"   URL: {url}")
-        print(f"   Headers: {headers}")
-        print(f"   Payload: {payload}")
-
-        # Send request
-        response = requests.post(url, json=payload, headers=headers, timeout=30)
-
-        # --- Debug the raw response ---
-        print(f"\n📡 Response status: {response.status_code}")
-        print(f"📡 Response headers: {response.headers}")
-        print(f"📡 Raw response (first 1000 chars):\n{response.text[:1000]}")
-
-        # Try to parse JSON
-        try:
-            result = response.json()
-        except json.JSONDecodeError:
-            # Not JSON – show the raw error
-            flash('Payment service returned an invalid response. Please try again later.', 'error')
-            print("❌ Response was NOT JSON.")
+        if not phone_number or not operator:
+            flash('Please enter your mobile money number and select your network.', 'error')
             return render_template('group_payment.html', payment=payment)
 
-        # Process JSON response
-        if response.status_code == 200 and result.get('status'):
-            data = result.get('data', {})
-            if data.get('status') in ['pending', 'pay-offline']:
-                # Payment initiated – save reference
-                cursor = mysql.connection.cursor()
-                cursor.execute(
-                    "UPDATE payment SET transactionID = %s, paymentStatus = 'pending' WHERE paymentID = %s",
-                    (reference, paymentID)
-                )
-                mysql.connection.commit()
-                cursor.close()
+        if not re.match(r'^(09|07)\d{8}$', phone_number):
+            flash('Please enter a valid Zambian mobile number (e.g., 0977123456).', 'error')
+            return render_template('group_payment.html', payment=payment)
 
-                flash('Payment request sent to your phone. Please confirm on your mobile money app.', 'success')
-                return render_template('group_payment.html', payment=payment, payment_initiated=True)
+        try:
+            reference = f"ZIT-{uuid.uuid4().hex[:8].upper()}"
+            url = f"{LENCO_BASE_URL}collections/mobile-money"
+
+            # Headers – added a real User-Agent since Cloudflare (in front of
+            # api.lenco.co) can 403-block requests carrying the default
+            # python-requests UA
+            headers = {
+                'Authorization': f'Bearer {LENCO_SECRET_KEY}',
+                'accept': 'application/json',
+                'content-type': 'application/json',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
+            }
+
+            payload = {
+                "reference": reference,
+                "amount": float(payment['amount']),
+                "currency": "ZMW",
+                "operator": operator,          # 'airtel', 'mtn', or 'zamtel'
+                "phone": phone_number,
+                "country": "zm",
+                "bearer": "customer"
+            }
+
+            # --- Debug output ---
+            print("\n🔍 Sending to Lenco:")
+            print(f"   URL: {url}")
+            print(f"   Payload: {payload}")
+
+            # Send request
+            response = requests.post(url, json=payload, headers=headers, timeout=30)
+
+            # --- Debug the raw response ---
+            print(f"\n📡 Response status: {response.status_code}")
+            print(f"📡 Raw response (first 1000 chars):\n{response.text[:1000]}")
+
+            # Try to parse JSON
+            try:
+                result = response.json()
+            except json.JSONDecodeError:
+                flash('Payment service returned an invalid response. Please try again later.', 'error')
+                print("❌ Response was NOT JSON.")
+                return render_template('group_payment.html', payment=payment)
+
+            # Process JSON response
+            if response.status_code == 200 and result.get('status'):
+                data = result.get('data', {})
+                if data.get('status') in ['pending', 'pay-offline']:
+                    # Payment initiated – save reference, poller/webhook will finalize it
+                    cursor = mysql.connection.cursor()
+                    cursor.execute(
+                        "UPDATE payment SET transactionID = %s, paymentStatus = 'pending' WHERE paymentID = %s",
+                        (reference, paymentID)
+                    )
+                    mysql.connection.commit()
+                    cursor.close()
+
+                    flash('Payment request sent to your phone. Please confirm on your mobile money app.', 'success')
+                    return render_template('group_payment.html', payment=payment, payment_initiated=True)
+                elif data.get('status') == 'successful':
+                    # Rare, but Lenco can return an already-completed status synchronously
+                    cursor = mysql.connection.cursor()
+                    cursor.execute(
+                        "UPDATE payment SET transactionID = %s WHERE paymentID = %s",
+                        (reference, paymentID)
+                    )
+                    mysql.connection.commit()
+                    cursor.close()
+
+                    finalize_successful_payment(paymentID)
+                    payment['paymentStatus'] = 'successful'
+                    flash('Payment successful! You can now join the session.', 'success')
+                    return render_template('group_payment.html', payment=payment, payment_success=True)
+                else:
+                    flash(f'Payment status: {data.get("status")}. Please try again.', 'error')
             else:
-                flash(f'Payment status: {data.get("status")}. Please try again.', 'error')
-        else:
-            # API returned error
-            error_msg = result.get('message', result.get('error', 'Unknown error from payment service'))
-            flash(f'Payment failed: {error_msg}', 'error')
-            print(f"❌ Lenco error: {error_msg}")
+                # API returned error
+                error_msg = result.get('message', result.get('error', 'Unknown error from payment service'))
+                flash(f'Payment failed: {error_msg}', 'error')
+                print(f"❌ Lenco error: {error_msg}")
 
-    except requests.exceptions.Timeout:
-        flash('Payment request timed out. Please try again.', 'error')
-    except requests.exceptions.ConnectionError as e:
-        flash('Cannot connect to payment service. Please check your internet connection.', 'error')
-        print(f"❌ Connection error: {e}")
-    except Exception as e:
-        flash(f'Payment processing error: {str(e)}', 'error')
-        print(f"❌ Unexpected error: {e}")
+        except requests.exceptions.Timeout:
+            flash('Payment request timed out. Please try again.', 'error')
+        except requests.exceptions.ConnectionError as e:
+            flash('Cannot connect to payment service. Please check your internet connection.', 'error')
+            print(f"❌ Connection error: {e}")
+        except Exception as e:
+            flash(f'Payment processing error: {str(e)}', 'error')
+            print(f"❌ Unexpected error: {e}")
 
     return render_template('group_payment.html', payment=payment)
+
 
 @app.route('/webhook/lenco', methods=['POST'])
 def lenco_webhook():
     """
-    Receive real-time payment status updates from Lenco.
-    Expected JSON payload includes: reference, status, amount, etc.
+    Receive real-time status updates from Lenco for BOTH directions of money
+    movement: collections (student payments coming in) and transfers (tutor
+    payouts going out).
+
+    Lenco's actual payload shape is:
+        {"event": "collection.successful", "data": {"reference": ..., "status": ..., ...}}
+        {"event": "transfer.successful",   "data": {"reference": ..., "status": ..., ...}}
+    (reference/status/amount live INSIDE "data", never at the top level.)
+
+    Every event also carries an X-Lenco-Signature header: HMAC-SHA512 of the
+    raw request body, keyed with SHA256(your API secret key). We must verify
+    this or anyone who finds this URL could POST a fake "successful" event
+    and unlock paid sessions — or fake a payout confirmation — for free.
     """
     try:
-        # Get raw JSON payload
+        raw_body = request.get_data()  # raw bytes — needed for the signature check
+
+        signature = request.headers.get('X-Lenco-Signature', '')
+        webhook_hash_key = hashlib.sha256(LENCO_SECRET_KEY.encode()).hexdigest()
+        expected_signature = hmac.new(
+            webhook_hash_key.encode(), raw_body, hashlib.sha512
+        ).hexdigest()
+
+        if not signature or not hmac.compare_digest(signature, expected_signature):
+            print("❌ Webhook signature mismatch — rejecting")
+            return jsonify({'error': 'Invalid signature'}), 401
+
         data = request.get_json()
         if not data:
             return jsonify({'error': 'Invalid payload'}), 400
 
         print(f" Webhook received: {data}")
 
-        # Extract fields (adjust names based on Lenco's actual payload)
-        reference = data.get('reference')
-        status = data.get('status')
-        # Sometimes status is nested: data.data.status
-        if not status and 'data' in data:
-            status = data['data'].get('status')
+        event = data.get('event', '')
+        event_data = data.get('data') or {}
+
+        # reference/status are nested under "data", not top-level
+        reference = event_data.get('reference')
+        status = event_data.get('status')
 
         if not reference or not status:
             print("Missing reference or status")
             return jsonify({'error': 'Missing fields'}), 400
 
-        # ✅ Only process successful payments
-        if status.lower() == 'successful':
-            cursor = mysql.connection.cursor()
-            # Find payment by transactionID (which stores the reference)
-            cursor.execute(
-                "SELECT paymentID, groupSessionID, studentID FROM payment WHERE transactionID = %s AND paymentStatus != 'successful'",
-                (reference,)
-            )
-            payment = cursor.fetchone()
-
-            if payment:
-                payment_id = payment[0]
-                group_session_id = payment[1]
-                student_id = payment[2]
-
-                # Update payment status
+        # --- Money coming IN (student paid for a session) ---
+        if event.startswith('collection.'):
+            if event == 'collection.successful' or status.lower() == 'successful':
+                cursor = mysql.connection.cursor()
                 cursor.execute(
-                    "UPDATE payment SET paymentStatus = 'successful' WHERE paymentID = %s",
-                    (payment_id,)
+                    "SELECT paymentID FROM payment WHERE transactionID = %s",
+                    (reference,)
                 )
-                # Increment enrolled count and unlock access link
-                cursor.execute("""
-                    UPDATE groupsession 
-                    SET enrolledCount = enrolledCount + 1, accessLinkUnlocked = 1 
-                    WHERE groupSessionID = %s
-                """, (group_session_id,))
-
-                # Create notification for student
-                cursor.execute(
-                    "INSERT INTO notification (userID, message) VALUES (%s, %s)",
-                    (student_id, 'Your payment was successful! You can now join the session.')
-                )
-
-                mysql.connection.commit()
+                payment = cursor.fetchone()
                 cursor.close()
 
-                print(f" Webhook processed: Payment {payment_id} marked successful")
+                if payment:
+                    payment_id = payment[0]
+                    finalize_successful_payment(payment_id)
+                    print(f" Webhook processed: Payment {payment_id} marked successful")
+                    return jsonify({'status': 'ok'}), 200
+                else:
+                    print(f" Payment not found for reference: {reference}")
+                    return jsonify({'error': 'Payment not found'}), 404
+
+            elif event == 'collection.failed' or status.lower() == 'failed':
+                cursor = mysql.connection.cursor()
+                cursor.execute(
+                    "UPDATE payment SET paymentStatus = 'failed' "
+                    "WHERE transactionID = %s AND paymentStatus != 'successful'",
+                    (reference,)
+                )
+                mysql.connection.commit()
+                cursor.close()
                 return jsonify({'status': 'ok'}), 200
+
             else:
-                print(f" Payment not found for reference: {reference}")
-                return jsonify({'error': 'Payment not found'}), 404
+                print(f"ℹ Ignoring collection event/status: {event} / {status}")
+                return jsonify({'status': 'ignored'}), 200
+
+        # --- Money going OUT (tutor withdrawal) ---
+        elif event.startswith('transfer.'):
+            if event == 'transfer.successful' or status.lower() == 'successful':
+                finalize_payout(reference, 'successful')
+                print(f" Webhook processed: Payout {reference} marked successful")
+                return jsonify({'status': 'ok'}), 200
+
+            elif event == 'transfer.failed' or status.lower() == 'failed':
+                reason = event_data.get('reasonForFailure')
+                finalize_payout(reference, 'failed', reason)
+                print(f" Webhook processed: Payout {reference} marked failed")
+                return jsonify({'status': 'ok'}), 200
+
+            else:
+                print(f"ℹ Ignoring transfer event/status: {event} / {status}")
+                return jsonify({'status': 'ignored'}), 200
+
         else:
-            # Optional: handle failed or pending status if needed
-            print(f"ℹ Ignoring status: {status}")
+            print(f"ℹ Ignoring unrecognized event: {event}")
             return jsonify({'status': 'ignored'}), 200
 
     except Exception as e:
@@ -2571,28 +2776,15 @@ def verify_payment(paymentID):
         url = f"{LENCO_BASE_URL}collections/status/{transaction_id}"
         headers = {
             'Authorization': f'Bearer {LENCO_SECRET_KEY}',
-            'accept': 'application/json'
+            'accept': 'application/json',
             # x-signature is NOT needed for outgoing API calls – drop it
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
         }
         response = requests.get(url, headers=headers, timeout=15)
         result = response.json()
 
         if result.get('status') and result.get('data', {}).get('status') == 'successful':
-            # Update DB and unlock
-            cursor = mysql.connection.cursor()
-            cursor.execute(
-                "UPDATE payment SET paymentStatus = 'successful' WHERE paymentID = %s",
-                (paymentID,)
-            )
-            cursor.execute("""
-                UPDATE groupsession g
-                JOIN payment p ON p.groupSessionID = g.groupSessionID
-                SET g.enrolledCount = g.enrolledCount + 1,
-                    g.accessLinkUnlocked = 1
-                WHERE p.paymentID = %s
-            """, (paymentID,))
-            mysql.connection.commit()
-            cursor.close()
+            finalize_successful_payment(paymentID)
             return jsonify({'status': 'successful'})
         elif result.get('data', {}).get('status') == 'failed':
             cursor = mysql.connection.cursor()
@@ -2667,10 +2859,10 @@ def wallet():
 
     tutor_id = session['userID']
     cursor = mysql.connection.cursor()
-    
-    # Get wallet balance
+
+    # Get wallet balance + saved payout details
     cursor.execute(
-        "SELECT availableBalance, totalWithdrawn FROM wallet WHERE tutorID = %s",
+        "SELECT availableBalance, totalWithdrawn, payoutPhone, payoutOperator FROM wallet WHERE tutorID = %s",
         (tutor_id,)
     )
     wallet = cursor.fetchone()
@@ -2682,9 +2874,13 @@ def wallet():
         mysql.connection.commit()
         available = 0
         total_withdrawn = 0
+        payout_phone = ''
+        payout_operator = ''
     else:
         available = float(wallet[0])
         total_withdrawn = float(wallet[1])
+        payout_phone = wallet[2] or ''
+        payout_operator = wallet[3] or ''
 
     # Get recent earnings (10% platform commission deducted)
     cursor.execute("""
@@ -2698,6 +2894,16 @@ def wallet():
         LIMIT 20
     """, (tutor_id,))
     transactions = cursor.fetchall()
+
+    # Is there a payout still in flight? If so, the page polls it.
+    cursor.execute("""
+        SELECT payoutID FROM payout
+        WHERE tutorID = %s AND payoutStatus = 'pending'
+        ORDER BY createdAt DESC LIMIT 1
+    """, (tutor_id,))
+    pending_row = cursor.fetchone()
+    pending_payout_id = pending_row[0] if pending_row else None
+
     cursor.close()
 
     transaction_list = []
@@ -2712,47 +2918,196 @@ def wallet():
     return render_template('wallet.html', 
                            availableBalance=available,
                            totalWithdrawn=total_withdrawn,
-                           transactions=transaction_list)
+                           transactions=transaction_list,
+                           payoutPhone=payout_phone,
+                           payoutOperator=payout_operator,
+                           pendingPayoutID=pending_payout_id)
 
 @app.route('/withdraw', methods=['POST'])
 def withdraw():
     if 'userID' not in session or session.get('role') != 'tutor':
         return jsonify({'error': 'Unauthorized'}), 401
 
+    tutor_id = session['userID']
     amount = request.form.get('amount', type=float)
+    phone_number = request.form.get('phone_number', '').strip()
+    operator = request.form.get('operator', '').strip()
+
     if not amount or amount <= 0:
         flash('Invalid amount.', 'error')
         return redirect('/wallet')
 
-    tutor_id = session['userID']
     cursor = mysql.connection.cursor()
-    cursor.execute("SELECT availableBalance FROM wallet WHERE tutorID = %s", (tutor_id,))
+    cursor.execute(
+        "SELECT availableBalance, payoutPhone, payoutOperator FROM wallet WHERE tutorID = %s",
+        (tutor_id,)
+    )
     row = cursor.fetchone()
+
     if not row or float(row[0]) < amount:
+        cursor.close()
         flash('Insufficient balance.', 'error')
         return redirect('/wallet')
 
+    # Fall back to previously saved payout details if the form left them blank
+    if not phone_number:
+        phone_number = row[1] or ''
+    if not operator:
+        operator = row[2] or ''
+
+    if not phone_number or not operator:
+        cursor.close()
+        flash('Please provide your mobile money number and network.', 'error')
+        return redirect('/wallet')
+
+    if not re.match(r'^(09|07)\d{8}$', phone_number):
+        cursor.close()
+        flash('Please enter a valid Zambian mobile number (e.g., 0977123456).', 'error')
+        return redirect('/wallet')
+
+    if not LENCO_ACCOUNT_ID:
+        cursor.close()
+        flash('Payouts are not configured yet (missing LENCO_ACCOUNT_ID). Contact support.', 'error')
+        return redirect('/wallet')
+
+    reference = f"ZITOUT-{uuid.uuid4().hex[:8].upper()}"
+
     try:
-        # Simulate payout request to Lenco
-        # In production, call Lenco API to initiate payout
-        # Assume success
-        new_balance = float(row[0]) - amount
-        cursor.execute(
-            "UPDATE wallet SET availableBalance = %s, totalWithdrawn = totalWithdrawn + %s WHERE tutorID = %s",
-            (new_balance, amount, tutor_id)
-        )
-        # Create notification for tutor
-        cursor.execute(
-            "INSERT INTO notification (userID, message) VALUES (%s, %s)",
-            (tutor_id, f'Your withdrawal of K{amount:.2f} has been processed.')
-        )
+        # Reserve the funds immediately (prevents double-withdraw races) and
+        # remember payout details for next time. Refunded automatically by
+        # finalize_payout() if the transfer ends up failing.
+        cursor.execute("""
+            UPDATE wallet
+            SET availableBalance = availableBalance - %s,
+                totalWithdrawn = totalWithdrawn + %s,
+                payoutPhone = %s,
+                payoutOperator = %s
+            WHERE tutorID = %s
+        """, (amount, amount, phone_number, operator, tutor_id))
+
+        cursor.execute("""
+            INSERT INTO payout (tutorID, amount, payoutStatus, reference, phone, operator)
+            VALUES (%s, %s, 'pending', %s, %s, %s)
+        """, (tutor_id, amount, reference, phone_number, operator))
         mysql.connection.commit()
         cursor.close()
-        flash('Withdrawal successful!', 'success')
     except Exception as e:
         mysql.connection.rollback()
+        cursor.close()
         flash(f'Withdrawal failed: {str(e)}', 'error')
+        return redirect('/wallet')
+
+    # Now actually ask Lenco to move the money
+    try:
+        url = f"{LENCO_BASE_URL}transfers/mobile-money"
+        headers = {
+            'Authorization': f'Bearer {LENCO_SECRET_KEY}',
+            'accept': 'application/json',
+            'content-type': 'application/json',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
+        }
+        payload = {
+            "accountId": LENCO_ACCOUNT_ID,
+            "amount": float(amount),
+            "reference": reference,
+            "narration": "ZitConnect tutor payout",
+            "phone": phone_number,
+            "operator": operator,
+            "country": "zm"
+        }
+
+        print("\n🔍 Sending payout to Lenco:")
+        print(f"   Payload: {payload}")
+
+        response = requests.post(url, json=payload, headers=headers, timeout=30)
+
+        print(f"📡 Payout response status: {response.status_code}")
+        print(f"📡 Raw response (first 1000 chars):\n{response.text[:1000]}")
+
+        try:
+            result = response.json()
+        except json.JSONDecodeError:
+            # Unknown outcome — leave payout 'pending', webhook/poller resolves it later
+            flash('Withdrawal request sent, but the response was invalid. We will confirm shortly.', 'error')
+            return redirect('/wallet')
+
+        if response.status_code == 200 and result.get('status'):
+            data = result.get('data', {})
+            transfer_status = data.get('status')
+
+            if transfer_status == 'successful':
+                finalize_payout(reference, 'successful')
+                flash('Withdrawal successful! Funds are on the way.', 'success')
+            elif transfer_status == 'pending':
+                flash('Withdrawal is being processed. This page will update automatically.', 'success')
+            else:  # 'failed'
+                finalize_payout(reference, 'failed', data.get('reasonForFailure'))
+                flash(f"Withdrawal failed: {data.get('reasonForFailure') or 'please try again.'}", 'error')
+        else:
+            error_msg = result.get('message', result.get('error', 'Unknown error from payment service'))
+            finalize_payout(reference, 'failed', error_msg)
+            flash(f'Withdrawal failed: {error_msg}', 'error')
+
+    except requests.exceptions.Timeout:
+        # Genuinely unknown outcome — do NOT guess. Leave 'pending' for the
+        # webhook/poller to resolve rather than risk a wrong refund or a
+        # silent double-pay on retry.
+        flash('Withdrawal request timed out. We will confirm the outcome shortly — check back before retrying.', 'error')
+    except requests.exceptions.ConnectionError as e:
+        print(f"❌ Payout connection error: {e}")
+        flash('Cannot connect to payment service. We will confirm the outcome shortly.', 'error')
+    except Exception as e:
+        print(f"❌ Unexpected payout error: {e}")
+        flash('Withdrawal request sent, but we could not confirm the outcome. Check back shortly.', 'error')
+
     return redirect('/wallet')
+
+@app.route('/payout/verify/<int:payoutID>', methods=['GET'])
+def verify_payout(payoutID):
+    if 'userID' not in session or session.get('role') != 'tutor':
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    cursor = mysql.connection.cursor()
+    cursor.execute(
+        "SELECT reference, payoutStatus FROM payout WHERE payoutID = %s AND tutorID = %s",
+        (payoutID, session['userID'])
+    )
+    payout = cursor.fetchone()
+    cursor.close()
+
+    if not payout:
+        return jsonify({'error': 'Payout not found'}), 404
+
+    reference, status = payout[0], payout[1]
+
+    if status != 'pending':
+        return jsonify({'status': status})
+
+    try:
+        url = f"{LENCO_BASE_URL}transfers/status/{reference}"
+        headers = {
+            'Authorization': f'Bearer {LENCO_SECRET_KEY}',
+            'accept': 'application/json',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
+        }
+        response = requests.get(url, headers=headers, timeout=15)
+        result = response.json()
+
+        remote_status = result.get('data', {}).get('status') if result.get('status') else None
+
+        if remote_status == 'successful':
+            finalize_payout(reference, 'successful')
+            return jsonify({'status': 'successful'})
+        elif remote_status == 'failed':
+            reason = result.get('data', {}).get('reasonForFailure')
+            finalize_payout(reference, 'failed', reason)
+            return jsonify({'status': 'failed'})
+        else:
+            return jsonify({'status': 'pending'})
+    except Exception as e:
+        print(f"Payout verify error: {e}")
+        return jsonify({'status': 'pending', 'error': str(e)})
+
 
 @app.route('/notifications')
 def notifications():

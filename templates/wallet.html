@@ -488,6 +488,14 @@
                 <div>
                     <form action="/withdraw" method="post" class="withdraw-form">
                         <input type="number" name="amount" step="0.01" min="0.01" placeholder="Amount" required>
+                        <input type="tel" name="phone_number" placeholder="e.g. 0977123456"
+                               pattern="(09|07)[0-9]{8}" value="{{ payoutPhone }}" required>
+                        <select name="operator" required>
+                            <option value="" disabled {% if not payoutOperator %}selected{% endif %}>Network</option>
+                            <option value="airtel" {% if payoutOperator == 'airtel' %}selected{% endif %}>Airtel</option>
+                            <option value="mtn" {% if payoutOperator == 'mtn' %}selected{% endif %}>MTN</option>
+                            <option value="zamtel" {% if payoutOperator == 'zamtel' %}selected{% endif %}>Zamtel</option>
+                        </select>
                         <button type="submit"><i class="bi bi-arrow-up-right"></i> Withdraw</button>
                     </form>
                 </div>
@@ -605,6 +613,31 @@
         })();
     </script>
     <!-- ====== END ADDED ====== -->
+
+    {% if pendingPayoutID %}
+    <script>
+        (function() {
+            var payoutId = {{ pendingPayoutID }};
+            var checkInterval = setInterval(function() {
+                fetch(`/payout/verify/${payoutId}`)
+                    .then(function(response) { return response.json(); })
+                    .then(function(data) {
+                        if (data.status === 'successful' || data.status === 'failed') {
+                            clearInterval(checkInterval);
+                            window.location.reload();
+                        }
+                    })
+                    .catch(function() {});
+            }, 5000);
+
+            // Stop polling after 2 minutes; the webhook will still resolve it
+            // in the background even if the tutor closes this tab.
+            setTimeout(function() {
+                clearInterval(checkInterval);
+            }, 120000);
+        })();
+    </script>
+    {% endif %}
 
 </body>
 </html>
