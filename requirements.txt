@@ -1,5 +1,32 @@
-flask
-flask-mysqldb
-flask-bcrypt
-flask-login
+# Core Web Framework
+Flask==3.0.2
+Werkzeug==3.0.1
 
+# Database & ORM (OOAD Implementation)
+# mysqlclient requires MySQL development headers installed on the OS. 
+# Alternatively, use pymysql if you face installation issues.
+Flask-SQLAlchemy==3.1.1
+mysqlclient==2.2.4
+
+# Database Migrations (Essential for keeping track of schema changes)
+Flask-Migrate==4.0.7
+
+# Security & Authentication (BCrypt Hashing - NFR-15)
+Flask-Bcrypt==1.0.1
+Flask-Login==0.6.3
+
+# Forms & Validation (FR-1 & FR-2)
+Flask-WTF==1.2.1
+WTForms==3.1.2
+
+# External API Integration (Lenco Payment Gateway - FR-24 to FR-28)
+requests==2.31.0
+
+# Environment Configuration (.env file management)
+python-dotenv==1.0.1
+
+# Date & Time Handling (For Session Scheduling)
+pytz==2024.1
+
+# Utilities
+cryptography==42.0.5
