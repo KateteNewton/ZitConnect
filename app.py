@@ -38,6 +38,7 @@ LENCO_SIGNATURE = os.getenv("LENCO_SIGNATURE")
 # Get this once from GET https://api.lenco.co/access/v2/accounts and put it in your .env
 # as LENCO_ACCOUNT_ID=<uuid>. This is NOT a tutor's ID — it's your own platform account.
 LENCO_ACCOUNT_ID = os.getenv("LENCO_ACCOUNT_ID")
+print(f"🔑 Key loaded: {LENCO_SECRET_KEY[:6]}...{LENCO_SECRET_KEY[-4:]} (length: {len(LENCO_SECRET_KEY)})")
 
 # Payment simulation mode – set to False when real credentials work
 SIMULATE_PAYMENT = False
@@ -2009,15 +2010,18 @@ def book_session():
         flash('Please login as a student to book a session.', 'error')
         return redirect('/login')
 
-    # --- POST: Handle individual booking (unchanged) ---
+    # --- POST: Handle individual booking ---
     if request.method == 'POST':
         tutor_id = request.form.get('tutorID')
         course_code = request.form.get('courseCode', '').strip()
         scheduled_date = request.form.get('scheduledDate')
         scheduled_time = request.form.get('timeSlot')
         session_type = request.form.get('sessionType', 'individual')
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
 
         if not tutor_id or not course_code or not scheduled_date or not scheduled_time:
+            if is_ajax:
+                return jsonify({'success': False, 'error': 'Please complete all booking fields.'}), 400
             flash('Please complete all booking fields.', 'error')
             return redirect('/book-session')
 
@@ -2028,11 +2032,43 @@ def book_session():
                 "VALUES (%s, %s, %s, %s, %s, %s, 'pending')",
                 (session['userID'], tutor_id, course_code, session_type, scheduled_date, scheduled_time)
             )
+
+            # Look up the tutor's name for the notification text
+            cursor.execute("SELECT fullName FROM user WHERE userID = %s", (tutor_id,))
+            tutor_row = cursor.fetchone()
+            tutor_name = tutor_row[0] if tutor_row else 'the tutor'
+
+            # Notify the student — so their own bell/notification history shows it,
+            # not just a flash message that disappears after this redirect.
+            cursor.execute(
+                "INSERT INTO notification (userID, message) VALUES (%s, %s)",
+                (session['userID'],
+                 f'Your session request for {course_code} with {tutor_name} has been sent. '
+                 f'You will be notified once they respond.')
+            )
+            # Notify the tutor — so they know a new request is waiting on them.
+            cursor.execute(
+                "INSERT INTO notification (userID, message) VALUES (%s, %s)",
+                (tutor_id,
+                 f'New session request for {course_code} from {session.get("fullName", "a student")}.')
+            )
+
             mysql.connection.commit()
             cursor.close()
+
+            if is_ajax:
+                return jsonify({
+                    'success': True,
+                    'message': f'Your request has been sent to {tutor_name}. You will be notified once they respond.'
+                })
+
             flash('Session request submitted successfully.', 'success')
             return redirect('/student-dashboard')
+
         except Exception as e:
+            mysql.connection.rollback()
+            if is_ajax:
+                return jsonify({'success': False, 'error': str(e)}), 500
             flash(f'Booking failed: {str(e)}', 'error')
             return redirect('/book-session')
 

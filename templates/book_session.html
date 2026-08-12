@@ -75,6 +75,67 @@
         .success-btn:hover {
             background: #1e7e34;
         }
+        /* Request-sent popup */
+        .popup-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(26, 58, 92, 0.55);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+        .popup-overlay.show {
+            display: flex;
+        }
+        .popup-box {
+            background: white;
+            border-radius: 14px;
+            padding: 32px 28px;
+            max-width: 360px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+            animation: popupIn 0.2s ease-out;
+        }
+        @keyframes popupIn {
+            from { opacity: 0; transform: scale(0.92); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .popup-icon {
+            font-size: 48px;
+            color: #28a745;
+            margin-bottom: 12px;
+        }
+        .popup-box h3 {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1a3a5c;
+            margin-bottom: 8px;
+        }
+        .popup-box p {
+            color: #555;
+            font-size: 14px;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+        .popup-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .popup-actions .btn {
+            width: 100%;
+            justify-content: center;
+        }
+        .secondary-btn {
+            background: #f1f3f5;
+            color: #1a3a5c;
+        }
+        .secondary-btn:hover {
+            background: #e2e6ea;
+        }
     </style>
 </head>
 <body>
@@ -182,6 +243,21 @@
 
                     </form>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Request-sent popup -->
+    <div id="requestSentOverlay" class="popup-overlay">
+        <div class="popup-box">
+            <div class="popup-icon"><i class="fas fa-check-circle"></i></div>
+            <h3>Request Sent!</h3>
+            <p id="requestSentMessage">Your session request has been sent.</p>
+            <div class="popup-actions">
+                <button type="button" class="btn primary-btn" onclick="window.location.href='/upcoming-sessions'">
+                    View My Sessions
+                </button>
+                <button type="button" class="btn secondary-btn" id="popupCloseBtn">Book Another</button>
             </div>
         </div>
     </div>
@@ -326,6 +402,52 @@ dateInput.addEventListener('change', function() {
 
         // Disable group select initially (individual is default)
         groupSelect.disabled = true;
+
+        // Individual booking: submit via fetch so we can show a popup instead
+        // of a full page redirect. (Group booking uses payBtn -> bookingForm.submit()
+        // directly, which never fires this 'submit' event, so it's unaffected.)
+        bookingForm.addEventListener('submit', function(e) {
+            const selectedType = document.querySelector('input[name="sessionType"]:checked').value;
+            if (selectedType !== 'individual') return;
+
+            e.preventDefault();
+
+            const submitBtn = individualSection.querySelector('button[type="submit"]');
+            const originalBtnHTML = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+
+            fetch('/book-session', {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                body: new FormData(bookingForm)
+            })
+                .then(response => response.json())
+                .then(data => {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalBtnHTML;
+                    if (data.success) {
+                        document.getElementById('requestSentMessage').textContent = data.message;
+                        document.getElementById('requestSentOverlay').classList.add('show');
+                        bookingForm.reset();
+                        typeRadios[0].checked = true;
+                        individualSection.classList.add('active');
+                        groupSection.classList.remove('active');
+                    } else {
+                        alert(data.error || 'Something went wrong. Please try again.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Booking error:', error);
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalBtnHTML;
+                    alert('Network error. Please try again.');
+                });
+        });
+
+        document.getElementById('popupCloseBtn').addEventListener('click', function() {
+            document.getElementById('requestSentOverlay').classList.remove('show');
+        });
     </script>
     <script src="/static/js/student_common.js"></script>
 </body>
