@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notifications - ZitConnect</title>
+    {% if role == 'tutor' %}
+    <link rel="stylesheet" href="/static/css/tutor_dashboard.css">
+    {% else %}
+    <link rel="stylesheet" href="/static/css/student_dashbord.css">
+    {% endif %}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <!-- Shared styles for notifications list + mobile tweaks -->
+    <style>
+        /* -------- Notification Items -------- */
+        .notification-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 14px 20px;
+            border-bottom: 1px solid #e5e7eb;
+            background: #fff;
+            transition: background 0.2s;
+        }
+        .notification-item:hover {
+            background: #f8fafc;
+        }
+        .notification-item.unread {
+            background: #e7f3ff;
+            border-left: 4px solid #2c5f8a;
+        }
+        .notification-icon {
+            font-size: 24px;
+            color: #2c5f8a;
+            flex-shrink: 0;
+        }
+        .notification-content {
+            flex: 1;
+        }
+        .notification-content .message {
+            font-size: 14px;
+            color: #1a1a1a;
+        }
+        .notification-content .time {
+            font-size: 12px;
+            color: #6c757d;
+            display: block;
+            margin-top: 4px;
+        }
+        .notification-actions {
+            flex-shrink: 0;
+        }
+        .mark-read-btn {
+            background: none;
+            border: none;
+            color: #2c5f8a;
+            cursor: pointer;
+            font-size: 13px;
+            padding: 4px 12px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        .mark-read-btn:hover {
+            background: #e5e7eb;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c757d;
+        }
+        .empty-state i {
+            font-size: 48px;
+            color: #d1d5db;
+            margin-bottom: 12px;
+        }
+        .empty-state p {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1a3a5c;
+            margin: 0;
+        }
+        .empty-state small {
+            display: block;
+            margin-top: 8px;
+            font-size: 14px;
+        }
+
+        /* -------- Tutor Sidebar Badge (already in tutor_dashboard.css) -------- */
+        .badge-notification {
+            display: none;
+            background: #dc3545;
+            color: white;
+            border-radius: 50%;
+            padding: 2px 8px;
+            font-size: 12px;
+            font-weight: bold;
+            line-height: 1.4;
+            margin-left: auto;
+        }
+        .menu-item .badge-notification {
+            margin-left: auto;
+        }
+
+        /* -------- Mobile Overrides -------- */
+        @media (max-width: 768px) {
+            .notification-item {
+                flex-wrap: wrap;
+                gap: 10px;
+                padding: 12px 16px;
+            }
+            .notification-actions {
+                width: 100%;
+                text-align: right;
+            }
+            .notification-content .message {
+                font-size: 13px;
+            }
+            .notification-content .time {
+                font-size: 11px;
+            }
+            .mark-read-btn {
+                font-size: 12px;
+                padding: 6px 12px;
+            }
+            .empty-state {
+                padding: 40px 16px;
+            }
+            .empty-state i {
+                font-size: 36px;
+            }
+            .empty-state p {
+                font-size: 16px;
+            }
+            .empty-state small {
+                font-size: 13px;
+            }
+        }
+
+        /* -------- Ensure full height backgrounds -------- */
+        body {
+            min-height: 100vh;
+            background: #f4f7fc;
+        }
+        .right {
+            background: #f4f7fc;
+        }
+        .content {
+            background: #f4f7fc;
+        }
+
+        /* -------- Tutor mobile menu toggle (already in tutor_dashboard.css) -------- */
+        .mobile-menu-toggle {
+            display: none;
+        }
+        .sidebar-overlay {
+            display: none;
+        }
+        @media (max-width: 768px) {
+            .mobile-menu-toggle {
+                display: block;
+            }
+            .sidebar-overlay {
+                display: block;
+            }
+        }
+    </style>
+</head>
+<body>
+
+{% if role == 'tutor' %}
+    <!-- ===== TUTOR CHROME ===== -->
+    <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
+        <i class="bi bi-list"></i>
+    </button>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <div class="Dashboard">
+        <div class="left" id="sidebar">
+            <div class="Header">
+                <div class="logo-circle"></div>
+                <h1>ZitConnect</h1>
+            </div>
+            <a href="/tutor-dashboard" class="menu-item">
+                <i class="bi bi-speedometer2 menu-icon"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="/my-sessions" class="menu-item">
+                <i class="bi bi-calendar-check menu-icon"></i>
+                <span>My Sessions</span>
+            </a>
+            <a href="/wallet" class="menu-item">
+                <i class="bi bi-currency-dollar menu-icon"></i>
+                <span>Earnings</span>
+            </a>
+            <a href="/manage-courses" class="menu-item">
+                <i class="bi bi-journal-bookmark menu-icon"></i>
+                <span>Course Management</span>
+            </a>
+            <a href="/availability" class="menu-item">
+                <i class="bi bi-calendar-week menu-icon"></i>
+                <span>Availability</span>
+            </a>
+            <a href="/tutor-profile" class="menu-item">
+                <i class="bi bi-person-circle menu-icon"></i>
+                <span>Profile</span>
+            </a>
+            <a href="/notifications" class="menu-item active-menu">
+                <i class="bi bi-bell menu-icon"></i>
+                <span>Notifications</span>
+                <span id="notif-badge" class="badge-notification" style="display:none;">0</span>
+            </a>
+            <a href="/logout" class="menu-item logout-item">
+                <i class="bi bi-box-arrow-right menu-icon"></i>
+                <span>Logout</span>
+            </a>
+        </div>
+
+        <div class="right">
+            <div class="Welcome_part">
+                <h2>Notifications</h2>
+                <p>Stay updated with your activities and requests.</p>
+            </div>
+
+            <div class="bottom" style="padding: 0;">
+                {% include 'notifications_list.html' %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Tutor mobile menu toggle script -->
+    <script>
+        (function() {
+            'use strict';
+            var sidebar = document.getElementById('sidebar');
+            var overlay = document.getElementById('sidebarOverlay');
+            var toggleBtn = document.getElementById('mobileMenuToggle');
+            var isOpen = false;
+
+            function openMenu() {
+                sidebar.classList.add('open');
+                overlay.classList.add('active');
+                toggleBtn.innerHTML = '<i class="bi bi-x"></i>';
+                isOpen = true;
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeMenu() {
+                sidebar.classList.remove('open');
+                overlay.classList.remove('active');
+                toggleBtn.innerHTML = '<i class="bi bi-list"></i>';
+                isOpen = false;
+                document.body.style.overflow = '';
+            }
+
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', function() {
+                    isOpen ? closeMenu() : openMenu();
+                });
+            }
+            if (overlay) {
+                overlay.addEventListener('click', closeMenu);
+            }
+
+            window.addEventListener('resize', function() {
+                if (window.innerWidth > 768 && isOpen) closeMenu();
+            });
+
+            document.querySelectorAll('.menu-item').forEach(function(item) {
+                item.addEventListener('click', function() {
+                    if (window.innerWidth <= 768 && isOpen) closeMenu();
+                });
+            });
+        })();
+    </script>
+
+{% else %}
+    <!-- ===== STUDENT CHROME ===== -->
+    {% include 'student_nav.html' %}
+
+    <div class="page-wrapper">
+        <div class="sidebar">
+            <div class="sidebar-profile">
+                <div class="sidebar-avatar">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div class="sidebar-name">{{ fullName or 'Student' }}</div>
+            </div>
+            <ul class="sidebar-menu">
+                <li>
+                    <a href="/student-dashboard">
+                        <i class="fas fa-home"></i>
+                        <span>Home</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/upcoming-sessions">
+                        <i class="fas fa-calendar-check"></i>
+                        <span>Sessions</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/notifications" class="active">
+                        <i class="fas fa-bell"></i>
+                        <span>Notifications</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/student-profile">
+                        <i class="fas fa-user-circle"></i>
+                        <span>Profile</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/logout">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Logout</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="content">
+            <div class="content-wrapper" style="max-width: 800px;">
+                <div class="card-header">
+                    <h3>Notifications</h3>
+                </div>
+                {% include 'notifications_list.html' %}
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/student_common.js"></script>
+
+{% endif %}
+
+<!-- ===== SHARED NOTIFICATIONS LOGIC ===== -->
+<script>
+    function markAsRead(notificationId) {
+        fetch(`/notifications/mark-read/${notificationId}`, { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const item = document.getElementById(`notif-${notificationId}`);
+                    if (item) {
+                        item.classList.remove('unread');
+                        const actionBtn = item.querySelector('.notification-actions');
+                        actionBtn.innerHTML = '<span style="color: #6c757d; font-size: 13px;">Read</span>';
+                    }
+                    updateNotifCount();
+                }
+            })
+            .catch(err => console.error('Error marking as read:', err));
+    }
+
+    function updateNotifCount() {
+        fetch("/api/unread-count")
+            .then(response => response.json())
+            .then(data => {
+                // Update tutor badge (if present)
+                const badge = document.getElementById("notif-badge");
+                if (badge) {
+                    if (data.count > 0) {
+                        badge.textContent = data.count;
+                        badge.style.display = "inline";
+                    } else {
+                        badge.style.display = "none";
+                    }
+                }
+                // Student badge is updated by student_common.js
+            })
+            .catch(err => console.log("Notification fetch error:", err));
+    }
+
+    document.addEventListener('DOMContentLoaded', updateNotifCount);
+    setInterval(updateNotifCount, 10000);
+</script>
+
+</body>
+</html>

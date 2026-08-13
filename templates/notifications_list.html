@@ -1,0 +1,28 @@
+{% if notifications and notifications|length > 0 %}
+    {% for notif in notifications %}
+        <div class="notification-item {% if not notif.isRead %}unread{% endif %}" id="notif-{{ notif.id }}">
+            <div class="notification-icon">
+                <i class="bi bi-bell"></i>
+            </div>
+            <div class="notification-content">
+                <span class="message">{{ notif.message }}</span>
+                <span class="time">{{ notif.createdAt }}</span>
+            </div>
+            <div class="notification-actions">
+                {% if not notif.isRead %}
+                    <button class="mark-read-btn" onclick="markAsRead({{ notif.id }})">
+                        <i class="bi bi-check-circle"></i> Mark as read
+                    </button>
+                {% else %}
+                    <span style="color: #6c757d; font-size: 13px;">Read</span>
+                {% endif %}
+            </div>
+        </div>
+    {% endfor %}
+{% else %}
+    <div class="empty-state">
+        <i class="bi bi-inbox"></i>
+        <p>No notifications</p>
+        <small>When you receive updates, they will appear here.</small>
+    </div>
+{% endif %}

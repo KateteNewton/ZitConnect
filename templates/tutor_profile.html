@@ -513,6 +513,11 @@
                 <i class="bi bi-person-circle menu-icon"></i>
                 <span>Profile</span>
             </a>
+            <a href="/notifications" class="menu-item" style="text-decoration: none; color: inherit; position: relative;">
+    <i class="bi bi-bell menu-icon"></i>
+    <span>Notifications</span>
+    <span id="tutor-notif-badge" class="badge-notification" style="display:none; background: #dc3545; color: white; border-radius: 50%; padding: 2px 8px; font-size: 12px; margin-left: auto; line-height: 1.4;">0</span>
+</a>
             <a href="/logout" class="menu-item logout-item" style="text-decoration: none; color: inherit;">
                 <i class="bi bi-box-arrow-right menu-icon"></i>
                 <span>Logout</span>
@@ -636,12 +641,12 @@
                 </div>
 
                 <div class="upload-card">
-                    <form method="POST" enctype="multipart/form-data" class="upload-form">
+                    <form method="POST" enctype="multipart/form-data" class="upload-form" id="docUploadForm">
                         <input type="hidden" name="action" value="upload_doc">
                         <div class="file-input-wrapper">
                             <i class="bi bi-cloud-arrow-up"></i>
                             <p>Upload Document</p>
-                            <input type="file" id="document" name="document" accept=".pdf,.jpg,.jpeg,.png" required>
+                            <input type="file" id="documentFile" name="document" accept=".pdf,.jpg,.jpeg,.png">
                             <small>PDF, JPG, or PNG (Max 5MB)</small>
                         </div>
                         <button type="submit" class="btn-submit">Upload</button>
@@ -842,6 +847,43 @@
                 }, 500);
             }
         });
+
+        // Friendly check instead of relying on native `required` validation,
+        // which silently blocks submission when the field sits inside a
+        // toggled tab panel.
+        document.getElementById('docUploadForm').addEventListener('submit', function(e) {
+            const fileInput = document.getElementById('documentFile');
+            if (!fileInput.files || fileInput.files.length === 0) {
+                e.preventDefault();
+                alert('Please choose a document to upload.');
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+        const fileInput = document.getElementById('documentFile');
+        const fileWrapper = document.querySelector('.file-input-wrapper');
+        const uploadForm = document.getElementById('docUploadForm');
+
+        if (fileWrapper && fileInput) {
+            // Clicking the wrapper opens the file picker
+            fileWrapper.addEventListener('click', function(e) {
+                // Avoid double-trigger if the click is directly on the input itself
+                if (e.target !== fileInput) {
+                    fileInput.click();
+                }
+            });
+        }
+
+        if (fileInput) {
+            // Auto-submit when a file is selected
+            fileInput.addEventListener('change', function() {
+                if (this.files && this.files.length > 0) {
+                    // Optional: show a loading state or spinner
+                    uploadForm.submit();
+                }
+            });
+        }
+    });
     </script>
 </body>
 </html>

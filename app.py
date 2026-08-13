@@ -821,11 +821,18 @@ def student_dashboard():
             for row in sessions_raw
         ]
 
-        # Fetch approved tutors and their courses
+        # Fetch tutors: verified first, then highest-rated first within each group
         cursor.execute(
             "SELECT u.userID, u.fullName, u.profilePicture, IFNULL(t.averageRating,0), t.verificationStatus, IFNULL(t.bio,'') "
             "FROM user u JOIN tutor t ON u.userID = t.tutorID "
-            "ORDER BY u.fullName"
+            "ORDER BY "
+            "  CASE t.verificationStatus "
+            "    WHEN 'approved' THEN 1 "
+            "    WHEN 'pending' THEN 2 "
+            "    ELSE 3 "
+            "  END, "
+            "  t.averageRating DESC, "
+            "  u.fullName ASC"
         )
         tutors_raw = cursor.fetchall()
 
@@ -3165,7 +3172,10 @@ def notifications():
             'isRead': bool(row[2]),
             'createdAt': row[3].strftime('%Y-%m-%d %H:%M') if row[3] else ''
         })
-    return render_template('notifications.html', notifications=notifs)
+    return render_template('notifications.html',
+                           notifications=notifs,
+                           role=session.get('role'),
+                           fullName=session.get('fullName'))
 
 @app.route('/notifications/mark-read/<int:notificationID>', methods=['POST'])
 def mark_notification_read(notificationID):
